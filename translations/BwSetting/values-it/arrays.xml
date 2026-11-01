@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="adas_acc_beep">
+        <item>@string/car_toggle_close</item>
+        <item>@string/car_toggle_identify_only</item>
+        <item>@string/car_toggle_disappear_only</item>
+        <item>@string/car_toggle_identify_disappear</item>
+    </string-array>
+    <string-array name="adas_fcw_sensitivity">
+        <item>@string/car_adas_sensitivity_low</item>
+        <item>@string/car_adas_sensitivity_mid</item>
+        <item>@string/car_adas_sensitivity_high</item>
+    </string-array>
+    <string-array name="body_key_control_sunroof">
+        <item>@string/car_toggle_sync_on_off</item>
+        <item>@string/car_toggle_sync_on</item>
+        <item>@string/car_toggle_sync_off</item>
+        <item>@string/car_toggle_sync_out</item>
+    </string-array>
+    <string-array name="body_sunroof">
+        <item>@string/car_toggle_full_open</item>
+        <item>@string/car_toggle_warping</item>
+        <item>@string/car_toggle_close</item>
+    </string-array>
+    <string-array name="body_sunshade">
+        <item>@string/car_toggle_full_open</item>
+        <item>@string/car_toggle_close</item>
+    </string-array>
+    <string-array name="display_day_night_mode">
+        <item>@string/sys_toggle_day_night_mode_auto</item>
+        <item>@string/sys_toggle_day_night_mode_day</item>
+        <item>@string/sys_toggle_day_night_mode_night</item>
+    </string-array>
+    <string-array name="display_main_show">
+        <item>@string/sys_toggle_main_show_car</item>
+        <item>@string/sys_toggle_main_show_card</item>
+        <item>@string/sys_toggle_main_show_app</item>
+    </string-array>
+    <string-array name="display_standby_mode">
+        <item>@string/sys_toggle_standby_mode_analog_clock</item>
+        <item>@string/sys_toggle_standby_mode_digital_clock</item>
+        <item>@string/sys_toggle_standby_mode_black_screen</item>
+    </string-array>
+    <string-array name="general_language">
+        <item>简体中文</item>
+        <item>English</item>
+        <item>العربية</item>
+        <item>Español</item>
+        <item>Türkçe</item>
+        <item>Русский</item>
+        <item>Bahasa Indonesia</item>
+        <item>Deutsch</item>
+        <item>ไทย</item>
+        <item>فارسی</item>
+        <item>Italiano</item>
+        <item>한국어</item>
+    </string-array>
+    <string-array name="general_status_bar_date">
+        <item>@string/sys_toggle_close</item>
+        <item>@string/sys_toggle_bar_date_week</item>
+        <item>@string/sys_toggle_bar_date_week_solar</item>
+    </string-array>
+    <string-array name="general_time_style">
+        <item>@string/sys_toggle_time_style_12</item>
+        <item>@string/sys_toggle_time_style_24</item>
+    </string-array>
+    <string-array name="network_hotspot_encrypt">
+        <item>@string/network_hotspot_encrypt_none</item>
+        <item>@string/network_hotspot_encrypt_wpa2</item>
+    </string-array>
+    <string-array name="prefer_custom_key">
+        <item>@string/car_toggle_custom_key_navigation</item>
+        <item>@string/car_toggle_custom_key_avm</item>
+    </string-array>
+    <string-array name="prefer_custom_key_no_avm">
+        <item>@string/car_toggle_custom_key_navigation</item>
+    </string-array>
+    <string-array name="prefer_turn_round_mode">
+        <item>@string/car_toggle_turn_round_mode_normal</item>
+        <item>@string/car_toggle_turn_round_mode_comfort</item>
+        <item>@string/car_toggle_turn_round_mode_sport</item>
+    </string-array>
+    <string-array name="sound_speed_compensation">
+        <item>@string/sys_toggle_speed_compensation_close</item>
+        <item>@string/sys_toggle_speed_compensation_low</item>
+        <item>@string/sys_toggle_speed_compensation_middle</item>
+        <item>@string/sys_toggle_speed_compensation_high</item>
+    </string-array>
+    <string-array name="sys_raio_area">
+        <item>@string/radio_area_europe</item>
+        <item>@string/radio_area_north_america</item>
+        <item>@string/radio_area_middle_east</item>
+        <item>@string/radio_area_japan</item>
+        <item>@string/radio_area_south_america</item>
+        <item>@string/radio_area_southeast_asia</item>
+        <item>@string/radio_area_southeast_australia</item>
+        <item>@string/radio_area_asia</item>
+        <item>@string/radio_area_russia</item>
+    </string-array>
+    <string-array name="voice_sound_location">
+        <item>@string/sys_toggle_voice_location_driver</item>
+        <item>@string/sys_toggle_voice_location_assistant</item>
+        <item>@string/sys_toggle_voice_location_all</item>
+        <item>@string/sys_toggle_voice_location_auto</item>
+    </string-array>
+</resources>

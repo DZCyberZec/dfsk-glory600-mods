@@ -1,0 +1,11 @@
+# build output and signing keys: never commit
+build/
+out/
+*.apk
+*.idsig
+*.keystore
+*.jks
+*.pk8
+*.pem
+framework-res.apk
+.DS_Store

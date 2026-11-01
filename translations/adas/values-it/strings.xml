@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="BTN_BACK">Retro</string>
+    <string name="BTN_FRONT">Fronte</string>
+    <string name="BTN_LEFT">Sx</string>
+    <string name="BTN_RIGHT">Dx</string>
+    <string name="STR_AVMOVERSPEED">Velocità eccessiva: la Vista 360° verrà chiusa</string>
+    <string name="STR_AVMTIP" />
+    <string name="STR_CALIB">Calibrazione interna</string>
+    <string name="STR_CALIBED">Calibrazione completata</string>
+    <string name="STR_CALIBING">Rilevamento in corso...</string>
+    <string name="STR_CALIBING0">Calibrazione %0</string>
+    <string name="STR_CALIBING30">Calibrazione %30</string>
+    <string name="STR_CALIBING60">Calibrazione %60</string>
+    <string name="STR_CALIB_CONTINUE">Calibrazione in corso...</string>
+    <string name="STR_CALIB_EXT">Calibrazione esterna</string>
+    <string name="STR_CALIB_FAIL">Calibrazione non riuscita</string>
+    <string name="STR_CALIB_FAIL2">Eseguire prima la calibrazione interna</string>
+    <string name="STR_CAMERA_BACK">Posteriore</string>
+    <string name="STR_CAMERA_CLOSE">Chiudi</string>
+    <string name="STR_CAMERA_FRONT">Anteriore</string>
+    <string name="STR_CAMERA_SWITCH">Cambia</string>
+    <string name="STR_DOOR_OPEN">non chiusa</string>
+    <string name="STR_MIRROR_FOLD">Retrovisori esterni ripiegati</string>
+    <string name="STR_NO_SIGNAL">Nessun segnale</string>
+    <string name="STR_RESET">Ripristina</string>
+    <string name="STR_SPEEDTIP">Velocità troppo elevata: immagini della telecamera non disponibili</string>
+    <string name="app_name">Vista 360°</string>
+    <string name="app_name_avm">Vista 360°</string>
+    <string name="app_name_camera">Vista 360°</string>
+</resources>

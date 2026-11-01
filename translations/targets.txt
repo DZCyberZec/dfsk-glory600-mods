@@ -1,0 +1,17 @@
+# folder            target package            extra locales (apps that force English)
+BWLauncher3         com.android.launcher3
+BwAirCondition      com.bw.ac
+BwBluetoothSdk      com.bw.bluetooth
+BwBtPhone           com.bw.phone
+BwCarSource         com.bw.source
+BwFota              com.bw.upgrade
+BwGallery           com.bw.gallery
+BwMusicService      com.bw.musicservice
+BwSetting           com.bw.settings
+BwVideo             com.bw.video
+DriverAssistance    com.bw.driverassistance
+DualInteraction     com.bw.dualinteraction
+EryaAutoLink        com.eryanet.vlink
+adas                com.bw.adas               en en-rUS
+mediaplayer         com.bw.mediaplayer
+suding              com.suding.speedplay

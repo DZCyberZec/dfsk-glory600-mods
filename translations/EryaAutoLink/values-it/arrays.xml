@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="mode_items">
+        <item>Wi-Fi Direct</item>
+        <item>Wi-Fi</item>
+    </string-array>
+    <string-array name="pref_autofire_options">
+        <item>Disattivato</item>
+        <item>Velocità 1</item>
+        <item>Velocità 2</item>
+        <item>Velocità 3</item>
+        <item>Velocità 4</item>
+        <item>Velocità 5</item>
+        <item>Velocità 6</item>
+        <item>Velocità 7</item>
+        <item>Velocità 8</item>
+        <item>Velocità 9</item>
+    </string-array>
+    <string-array name="pref_autofire_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+    </string-array>
+    <string-array name="pref_automap_options">
+        <item>Levette disattivate, L2,R2 come L1,R1</item>
+        <item>Levette come Coin,Start, L2,R2 come L1,R1</item>
+        <item>Levette come Coin,Start, L2,R2 disattivati</item>
+        <item>Levette disattivate, L2,R2 come Coin,Start</item>
+        <item>L1,R1 come Coin,Start, L2,R2 come L1,R1</item>
+        <item>L1,R1 come MENU,EXIT, L2,R2 come L1,R1</item>
+    </string-array>
+    <string-array name="pref_automap_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+    </string-array>
+    <string-array name="pref_buttons_size_options">
+        <item>Molto piccoli</item>
+        <item>Piccoli</item>
+        <item>Normali</item>
+        <item>Grandi</item>
+        <item>Molto grandi</item>
+    </string-array>
+    <string-array name="pref_buttons_size_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+    <string-array name="pref_controller_type_options">
+        <item>DPAD digitale</item>
+        <item>Stick digitale</item>
+        <item>Analogico-digitale (prestazioni)</item>
+        <item>Analogico-digitale (estetica)</item>
+    </string-array>
+    <string-array name="pref_controller_type_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="pref_dz_options">
+        <item>Nessuna</item>
+        <item>Bassa</item>
+        <item>Normale</item>
+        <item>Alta</item>
+        <item>Molto alta</item>
+    </string-array>
+    <string-array name="pref_dz_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+    <string-array name="pref_frameskip_options">
+        <item>Auto</item>
+        <item>Nessuno</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="pref_frameskip_values">
+        <item>-1</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="pref_global_video_render_options">
+        <item>SW (compatibilità)</item>
+        <item>GL (più veloce)</item>
+    </string-array>
+    <string-array name="pref_global_video_render_values">
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+    <string-array name="pref_input_external_options">
+        <item>Tastiera o IME</item>
+        <item>Rilevamento automatico gamepad</item>
+        <item>iCade originale</item>
+        <item>Compatibile iCP, Gametel o iCade</item>
+    </string-array>
+    <string-array name="pref_input_external_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="pref_low_norm_or_hight_options">
+        <item>Bassa</item>
+        <item>Normale</item>
+        <item>Alta</item>
+    </string-array>
+    <string-array name="pref_low_norm_or_hight_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+    <string-array name="pref_navbar_options">
+        <item>Visibile</item>
+        <item>Attenua o nascondi</item>
+        <item>Modalità immersiva (KitKat)</item>
+    </string-array>
+    <string-array name="pref_navbar_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+    <string-array name="pref_netplay_delay_options">
+        <item>Auto</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+    </string-array>
+    <string-array name="pref_netplay_delay_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+    </string-array>
+    <string-array name="pref_numbuttons_options">
+        <item>Auto</item>
+        <item>0 pulsanti</item>
+        <item>1 pulsante</item>
+        <item>2 pulsanti</item>
+        <item>3 pulsanti (A=B+X)</item>
+        <item>3 pulsanti</item>
+        <item>4 pulsanti</item>
+        <item>Tutti i pulsanti</item>
+    </string-array>
+    <string-array name="pref_numbuttons_values">
+        <item>-1</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>33</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+    <string-array name="pref_overlay_intensity_options">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="pref_overlay_intensity_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="pref_px_options">
+        <item>MAME (arcade originale)</item>
+        <item>Proporzioni pixel forzate (e risoluzione)</item>
+        <item>Proporzioni pixel forzate (smart, risoluzione fissa)</item>
+    </string-array>
+    <string-array name="pref_px_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+    <string-array name="pref_resolution_options">
+        <item>320x200 (16/10)</item>
+        <item>320x240 (4/3)</item>
+        <item>400x300 (4/3)</item>
+        <item>480x300 (16/10)</item>
+        <item>512x384 (4/3)</item>
+        <item>640x360 (16/9)</item>
+        <item>640x400 (16/10)</item>
+        <item>640x480 (4/3)</item>
+        <item>800x600 (4/3)</item>
+        <item>854x480 (16/9)</item>
+        <item>1024×576 (16/9)</item>
+        <item>1024x768 (4/3)</item>
+        <item>960x720 (4/3)</item>
+        <item>1280x720 (16/9)</item>
+        <item>1440x1080 (4/3)</item>
+        <item>1920x1080 (16/9)</item>
+    </string-array>
+    <string-array name="pref_resolution_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+        <item>11</item>
+        <item>12</item>
+        <item>13</item>
+        <item>14</item>
+        <item>15</item>
+        <item>16</item>
+    </string-array>
+    <string-array name="pref_scaleMode_options">
+        <item>Adatta (mantieni proporzioni)</item>
+        <item>Estendi a tutto schermo</item>
+        <item>Dimensioni originali</item>
+        <item>1.5X</item>
+        <item>2X</item>
+        <item>2.5X</item>
+        <item>3X</item>
+        <item>3.5X</item>
+        <item>4X</item>
+        <item>4.5X</item>
+        <item>5X</item>
+        <item>5.5X</item>
+        <item>6X</item>
+    </string-array>
+    <string-array name="pref_scaleMode_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+        <item>11</item>
+        <item>12</item>
+        <item>13</item>
+    </string-array>
+    <string-array name="pref_sound_engine_options">
+        <item>AudioTrack</item>
+        <item>AudioTrack alta latenza (sicuro)</item>
+        <item>OpenSL</item>
+        <item>OpenSL bassa latenza (migliore)</item>
+    </string-array>
+    <string-array name="pref_sound_engine_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="pref_sound_options">
+        <item>Disattivato</item>
+        <item>Attivo (11 kHz)</item>
+        <item>Attivo (22 kHz)</item>
+        <item>Attivo (33 kHz)</item>
+        <item>Attivo (44 kHz)</item>
+        <item>Attivo (48 kHz)</item>
+    </string-array>
+    <string-array name="pref_sound_values">
+        <item>-1</item>
+        <item>11025</item>
+        <item>22050</item>
+        <item>32000</item>
+        <item>44100</item>
+        <item>48000</item>
+    </string-array>
+    <string-array name="pref_speed_options">
+        <item>Predefinita</item>
+        <item>50%</item>
+        <item>60%</item>
+        <item>70%</item>
+        <item>80%</item>
+        <item>85%</item>
+        <item>90%</item>
+        <item>95%</item>
+        <item>100%</item>
+        <item>105%</item>
+        <item>110%</item>
+        <item>115%</item>
+        <item>120%</item>
+        <item>130%</item>
+        <item>140%</item>
+        <item>150%</item>
+    </string-array>
+    <string-array name="pref_speed_values">
+        <item>-1</item>
+        <item>50</item>
+        <item>60</item>
+        <item>70</item>
+        <item>80</item>
+        <item>85</item>
+        <item>90</item>
+        <item>95</item>
+        <item>100</item>
+        <item>105</item>
+        <item>110</item>
+        <item>115</item>
+        <item>120</item>
+        <item>130</item>
+        <item>140</item>
+        <item>150</item>
+    </string-array>
+    <string-array name="pref_stick_options">
+        <item>Auto</item>
+        <item>2 direzioni</item>
+        <item>4 direzioni</item>
+        <item>8 direzioni</item>
+    </string-array>
+    <string-array name="pref_stick_values">
+        <item>-1</item>
+        <item>2</item>
+        <item>4</item>
+        <item>8</item>
+    </string-array>
+    <string-array name="pref_tilt_neutralz_options">
+        <item>90 gradi</item>
+        <item>80 gradi</item>
+        <item>70 gradi</item>
+        <item>60 gradi</item>
+        <item>50 gradi</item>
+        <item>45 gradi</item>
+        <item>40 gradi</item>
+        <item>30 gradi</item>
+        <item>20 gradi</item>
+        <item>10 gradi</item>
+    </string-array>
+    <string-array name="pref_tilt_neutralz_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+    </string-array>
+    <string-array name="pref_vsync_options">
+        <item>Sicuro (dichiarato dal gioco)</item>
+        <item>50 Hz</item>
+        <item>60 Hz</item>
+        <item>Dichiarato dal sistema</item>
+    </string-array>
+    <string-array name="pref_vsync_values">
+        <item>-1</item>
+        <item>5000</item>
+        <item>6000</item>
+        <item>3</item>
+    </string-array>
+</resources>
