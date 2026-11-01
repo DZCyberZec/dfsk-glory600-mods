@@ -39,7 +39,7 @@
 
 | | |
 |---|---|
-| Car | DFSK Glory 600 (2024, EU / Italy) |
+| Car | DFSK Glory 600 (bought July 2025, EU / Italy) |
 | Android model (`Build.MODEL`) | `DFSK_F508_G` |
 | Platform | Yato1, Autochips / MediaTek **AC8257**, Android 9 |
 | OS firmware | `OS_Yato1_DFSK-F508-G_01_V2.44.00_241107` |
