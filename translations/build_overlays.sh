@@ -8,7 +8,8 @@ cd "$(dirname "$0")"
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home}
 BT=${ANDROID_HOME:-$HOME/Library/Android/sdk}/build-tools/35.0.0
 FW=framework-res.apk; [ -f $FW ] || { echo "missing $FW (see header)"; exit 1; }
-KS=overlay.keystore
+# Release builds: KEYSTORE=/path/to.jks KS_PASS=... KS_ALIAS=... ./build.sh (default: local throwaway key)
+KS=${KEYSTORE:-overlay.keystore}; KS_PASS=${KS_PASS:-android}; KS_ALIAS=${KS_ALIAS:-overlay}; export KS_PASS
 [ -f $KS ] || "$JAVA_HOME/bin/keytool" -genkeypair -keystore $KS -storepass android -keypass android \
     -alias overlay -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=DFSK IT overlay" -noprompt
 mkdir -p out
@@ -34,6 +35,6 @@ M
     $BT/aapt2 compile --dir $W/res -o $W/res.zip
     $BT/aapt2 link -o $W/u.apk -I $FW --manifest $W/AndroidManifest.xml --min-sdk-version 28 --target-sdk-version 28 --no-resource-removal $W/res.zip
     $BT/zipalign -f -p 4 $W/u.apk $W/a.apk
-    $BT/apksigner sign --ks $KS --ks-pass pass:android --out out/${A}_it_overlay.apk $W/a.apk
+    $BT/apksigner sign --ks $KS --ks-pass env:KS_PASS --ks-key-alias $KS_ALIAS --out out/${A}_it_overlay.apk $W/a.apk
     echo "OK out/${A}_it_overlay.apk -> $T"
 done

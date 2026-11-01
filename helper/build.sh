@@ -29,10 +29,11 @@ $BT/d8 --release --min-api 21 --lib "$JAR" --output $OUT $(find $OUT/classes -na
 # 4. align + sign
 $BT/zipalign -f -p 4 $OUT/unsigned.apk $OUT/aligned.apk
 APK=DFSK-Helper.apk
-KS=debug.keystore
+# Release builds: KEYSTORE=/path/to.jks KS_PASS=... KS_ALIAS=... ./build.sh (default: local throwaway key)
+KS=${KEYSTORE:-debug.keystore}; KS_PASS=${KS_PASS:-android}; KS_ALIAS=${KS_ALIAS:-dfskhelper}; export KS_PASS
 [ -f $KS ] || "$JAVA_HOME/bin/keytool" -genkeypair -keystore $KS -storepass android -keypass android \
     -alias dfskhelper -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=DFSK Helper" -noprompt
-$BT/apksigner sign --ks $KS --ks-pass pass:android --ks-key-alias dfskhelper --out $APK $OUT/aligned.apk
+$BT/apksigner sign --ks $KS --ks-pass env:KS_PASS --ks-key-alias $KS_ALIAS --out $APK $OUT/aligned.apk
 $BT/apksigner verify --print-certs $APK | grep "SHA-256"
 $BT/aapt2 dump badging $APK | head -1
 echo "OK -> $(pwd)/$APK"
