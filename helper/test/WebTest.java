@@ -35,6 +35,7 @@ public class WebTest {
     }
 
     public static void main(String[] a) throws Exception {
+        java.util.Locale.setDefault(java.util.Locale.ITALY);
         boolean ea = false; assert ea = true; if (!ea) throw new AssertionError("run with java -ea");
 
         // LAN filter
@@ -132,6 +133,8 @@ public class WebTest {
         r = req("GET /?pair=" + pt + " HTTP/1.1\r\n\r\n", 102);
         assert r.startsWith("HTTP/1.1 303") && !r.contains("Set-Cookie");
         assert req("GET / HTTP/1.1\r\n\r\n", 103).contains("già usato");  // flash shown on the login page
+        java.util.Locale.setDefault(java.util.Locale.US);
+        assert req("GET / HTTP/1.1\r\n\r\n", 0).contains("lang=en") && req("GET / HTTP/1.1\r\n\r\n", 0).contains("Log in");
 
         // QR encoder: known format word (M, mask 0 = 101010000010010), version by length, finder corners
         assert QrEncoder.formatBits(0) == 0b101010000010010;

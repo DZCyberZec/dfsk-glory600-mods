@@ -2,6 +2,7 @@ package it.cyberzec.home;
 
 public class LogicTest {
     public static void main(String[] a) {
+        java.util.Locale.setDefault(java.util.Locale.ITALY);
         assert Logic.meteoText(0).equals("Sereno");
         assert Logic.meteoText(63).equals("Pioggia");
         assert Logic.meteoText(96).equals("Temporale");
@@ -17,6 +18,10 @@ public class LogicTest {
         assert Logic.climaLevelText(28f).equals("4") && Logic.climaLevelText(28.5f).equals("4,5");
         assert Logic.climaLevelText(32f).equals("8") && Logic.climaLevelText(17f).equals("-8");
         assert Logic.climaLevelText(24f).equals("-1") && Logic.climaLevelText(24.5f).equals("-0,5") && Logic.climaLevelText(23.5f).equals("-1,5");
+        assert Logic.modeName(3).equals("Piedi + vetro");
+        java.util.Locale.setDefault(java.util.Locale.US);
+        assert Logic.meteoText(0).equals("Clear") && Logic.meteoText(85).equals("Snow showers") && Logic.meteoText(81).equals("Showers");
+        assert Logic.climaLevelText(28.5f).equals("4.5") && Logic.modeName(0).equals("Face");
         System.out.println("LogicTest OK");
     }
 }

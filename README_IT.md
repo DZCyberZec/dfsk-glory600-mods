@@ -33,8 +33,17 @@
 - **`translations/`**: traduzione italiana di 16 app di serie (overlay RRO).
 - **`icons/`**: set di icone "Aurora".
 
+**Lingua:** le app sono in inglese e passano da sole all'italiano se l'unità è in italiano.
+
 Le build di questo repo usano una chiave tua: si compilano, ma clima della Home e overlay vanno riprovati in auto con questa firma. Segnalalo nelle Issues.
 
 **Provato su:** DFSK Glory 600 (acquistata a luglio 2025, Italia), modello Android `DFSK_F508_G`, piattaforma Yato1 AC8257, firmware `OS_Yato1_DFSK-F508-G_01_V2.44.00_241107`, MCU `MCU_Yato1_DFSK-F508-G_01_V1.18.00_241107`. Altre unità Yato1 (es. DFSK E5) non provate: se la provi apri una Issue con le tue versioni.
+
+## Ripristino all'originale
+Prima del tagliando o di un intervento in garanzia: `./restore_stock.sh` (prima in prova, poi con `--yes`) toglie Home CyberZec, DFSK Helper e le traduzioni e rimette la Home di serie.
+Su `/system` non viene scritto nulla, quindi non resta alcuna traccia.
+Dopo, riavvia l'infotainment (o spegni e riaccendi l'auto) perché la Home originale ricarichi i testi.
+Se avevi cambiato `persist.suding.mic.gainlevel.default`, rimettilo a `5`.
+Guida completa e comandi manuali: [docs/INSTALL.md](docs/INSTALL.md#restore-to-stock).
 
 Compilazione e note tecniche: vedi [README.md](README.md) e [docs/](docs). Licenza MIT.

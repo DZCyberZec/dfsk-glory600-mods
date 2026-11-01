@@ -19,21 +19,26 @@ public final class WebPanel {
     public interface Backend {
         /** Status lines, label -> value (shown escaped). */
         Map<String, String> status();
-        /** Already whitelisted action/value (see ACTIONS). @return true on success. */
+        /** Already whitelisted action/value (see actions()). @return true on success. */
         boolean act(String action, String value);
     }
 
     /** Whitelist: action -> {value, label, value, label...}. Nothing else is accepted. */
-    static final String[][] ACTIONS = {
+    static String[][] actions() {
+        return new String[][]{
         {"mic", "1", "1", "2", "2", "3", "3"},
-        {"reverse", "0", "Pausa", "1", "Attenuata", "2", "Più bassa"},
-        {"callvol", "on", "Attivo", "off", "Spento"},
-        {"home", "restart", "Riavvia Home"},
-        {"adb", "on", "Attivo", "off", "Spento"},
-        {"voice", "on", "Attiva", "off", "Spenta"},
-    };
-    static final String[] TITLES = {"Microfono CarPlay", "Musica in retromarcia", "Volume chiamata dal volante",
-            "Home", "Accesso Mac (ADB Wi-Fi)", "Voce di benvenuto"};
+        {"reverse", "0", Lang.t("Pausa", "Pause"), "1", Lang.t("Attenuata", "Ducked"), "2", Lang.t("Più bassa", "Lower")},
+        {"callvol", "on", Lang.t("Attivo", "On"), "off", Lang.t("Spento", "Off")},
+        {"home", "restart", Lang.t("Riavvia Home", "Restart Home")},
+        {"adb", "on", Lang.t("Attivo", "On"), "off", Lang.t("Spento", "Off")},
+        {"voice", "on", Lang.t("Attiva", "On"), "off", Lang.t("Spenta", "Off")},
+        };
+    }
+    static String[] titles() {
+        return new String[]{Lang.t("Microfono CarPlay", "CarPlay microphone"), Lang.t("Musica in retromarcia", "Music in reverse"),
+                Lang.t("Volume chiamata dal volante", "Call volume from steering wheel"), "Home", Lang.t("Accesso Mac (ADB Wi-Fi)", "Computer access (ADB Wi-Fi)"),
+                Lang.t("Voce di benvenuto", "Welcome voice")};
+    }
     static final int MAX_HEADER = 8192, MAX_BODY = 2048;
 
     private final Backend backend;
@@ -136,7 +141,7 @@ public final class WebPanel {
     }
 
     static boolean allowed(String action, String value) {
-        for (String[] a : ACTIONS) {
+        for (String[] a : actions()) {
             if (!a[0].equals(action)) continue;
             for (int i = 1; i < a.length; i += 2) if (a[i].equals(value)) return true;
         }
@@ -146,37 +151,37 @@ public final class WebPanel {
     /** Handles one request. Public for the JVM self-check. */
     public void handle(InputStream in, OutputStream out, long now) throws IOException {
         Request r = parse(in);
-        if (r == null) { send(out, "400 Bad Request", null, "Richiesta non valida"); return; }
+        if (r == null) { send(out, "400 Bad Request", null, Lang.t("Richiesta non valida", "Invalid request")); return; }
         String token = cookie(r.headers.get("cookie"), "sid");
         String csrf = auth.csrf(token, now);
         if ("GET".equals(r.method) && "/".equals(r.path)) {
             String pair = form(r.query).get("pair");
             if (pair != null) { // QR code from the app: one-time token, then a clean URL
                 String t = auth.pair(pair, now);
-                flash = t == null ? "Codice QR scaduto o già usato: genera un nuovo QR nell'app, oppure usa il PIN." : "";
+                flash = t == null ? Lang.t("Codice QR scaduto o già usato: genera un nuovo QR nell'app, oppure usa il PIN.", "QR code expired or already used: make a new QR in the app, or use the PIN.") : "";
                 redirect(out, t == null ? null : "sid=" + t + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400");
                 return;
             }
             send(out, "200 OK", null, csrf == null ? loginPage(now) : panelPage(csrf));
             return;
         }
-        if (!"POST".equals(r.method)) { send(out, "405 Method Not Allowed", null, "Metodo non ammesso"); return; }
+        if (!"POST".equals(r.method)) { send(out, "405 Method Not Allowed", null, Lang.t("Metodo non ammesso", "Method not allowed")); return; }
         Map<String, String> f = form(r.body);
         if ("/login".equals(r.path)) {
             String t = auth.login(f.get("pin"), now);
-            flash = t == null ? (auth.isLocked(now) ? "Troppi tentativi: riprova tra 5 minuti." : "PIN errato.") : "";
+            flash = t == null ? (auth.isLocked(now) ? Lang.t("Troppi tentativi: riprova tra 5 minuti.", "Too many attempts: try again in 5 minutes.") : Lang.t("PIN errato.", "Wrong PIN.")) : "";
             redirect(out, t == null ? null : "sid=" + t + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400");
         } else if ("/logout".equals(r.path) && auth.checkCsrf(token, f.get("csrf"), now)) {
             auth.logout(token);
             redirect(out, "sid=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
         } else if ("/a".equals(r.path)) {
-            if (!auth.checkCsrf(token, f.get("csrf"), now)) { send(out, "403 Forbidden", null, "Sessione scaduta: ricarica la pagina."); return; }
+            if (!auth.checkCsrf(token, f.get("csrf"), now)) { send(out, "403 Forbidden", null, Lang.t("Sessione scaduta: ricarica la pagina.", "Session expired: reload the page.")); return; }
             String a = f.get("a"), v = f.get("v");
-            if (!allowed(a, v)) { send(out, "400 Bad Request", null, "Comando non valido"); return; }
-            flash = backend.act(a, v) ? "Fatto: " + a + " = " + v : "Non riuscito: " + a + " = " + v;
+            if (!allowed(a, v)) { send(out, "400 Bad Request", null, Lang.t("Comando non valido", "Invalid command")); return; }
+            flash = backend.act(a, v) ? Lang.t("Fatto: ", "Done: ") + a + " = " + v : Lang.t("Non riuscito: ", "Failed: ") + a + " = " + v;
             redirect(out, null);
         } else {
-            send(out, "404 Not Found", null, "Non trovato");
+            send(out, "404 Not Found", null, Lang.t("Non trovato", "Not found"));
         }
     }
 
@@ -188,7 +193,7 @@ public final class WebPanel {
     }
 
     private static void send(OutputStream out, String status, String setCookie, String html) throws IOException {
-        byte[] b = (html.startsWith("<!doctype") ? html : page("<p>" + esc(html) + "</p><p><a href=\"/\">Indietro</a></p>")).getBytes(StandardCharsets.UTF_8);
+        byte[] b = (html.startsWith("<!doctype") ? html : page("<p>" + esc(html) + "</p><p><a href=\"/\">" + Lang.t("Indietro", "Back") + "</a></p>")).getBytes(StandardCharsets.UTF_8);
         String h = "HTTP/1.1 " + status + "\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: " + b.length
                 + "\r\nCache-Control: no-store\r\nX-Frame-Options: DENY\r\nX-Content-Type-Options: nosniff\r\n"
                 + "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'\r\n"
@@ -206,32 +211,32 @@ public final class WebPanel {
     }
 
     private String loginPage(long now) {
-        return page(takeFlash() + (auth.isLocked(now) ? "<p>Accesso bloccato per qualche minuto.</p>" : "")
-                + "<form method=post action=/login><label>PIN (lo trovi nell'app DFSK Helper sull'auto)<br>"
+        return page(takeFlash() + (auth.isLocked(now) ? "<p>" + Lang.t("Accesso bloccato per qualche minuto.", "Access blocked for a few minutes.") + "</p>" : "")
+                + "<form method=post action=/login><label>" + Lang.t("PIN (lo trovi nell'app DFSK Helper sull'auto)", "PIN (shown in the DFSK Helper app in the car)") + "<br>"
                 + "<input name=pin inputmode=numeric pattern=\"[0-9]{6}\" maxlength=6 autocomplete=off required></label>"
-                + "<button>Entra</button></form>");
+                + "<button>" + Lang.t("Entra", "Log in") + "</button></form>");
     }
 
     private String panelPage(String csrf) {
-        StringBuilder sb = new StringBuilder(takeFlash()).append("<h2>Stato</h2><table>");
+        StringBuilder sb = new StringBuilder(takeFlash()).append("<h2>" + Lang.t("Stato", "Status") + "</h2><table>");
         for (Map.Entry<String, String> e : backend.status().entrySet())
             sb.append("<tr><th>").append(esc(e.getKey())).append("</th><td>").append(esc(e.getValue())).append("</td></tr>");
         sb.append("</table>");
         String hidden = "<input type=hidden name=csrf value=\"" + esc(csrf) + "\">";
-        for (int i = 0; i < ACTIONS.length; i++) {
-            String[] a = ACTIONS[i];
-            sb.append("<h2>").append(esc(TITLES[i])).append("</h2><form method=post action=/a>").append(hidden)
+        for (int i = 0; i < actions().length; i++) {
+            String[] a = actions()[i];
+            sb.append("<h2>").append(esc(titles()[i])).append("</h2><form method=post action=/a>").append(hidden)
               .append("<input type=hidden name=a value=").append(a[0]).append(">");
             for (int k = 1; k < a.length; k += 2)
                 sb.append("<button name=v value=\"").append(esc(a[k])).append("\">").append(esc(a[k + 1])).append("</button>");
             sb.append("</form>");
         }
-        sb.append("<form method=post action=/logout>").append(hidden).append("<button class=o>Esci</button></form>");
+        sb.append("<form method=post action=/logout>").append(hidden).append("<button class=o>" + Lang.t("Esci", "Log out") + "</button></form>");
         return page(sb.toString());
     }
 
     private static String page(String body) {
-        return "<!doctype html><html lang=it><head><meta charset=utf-8>"
+        return "<!doctype html><html lang=" + Lang.t("it", "en") + "><head><meta charset=utf-8>"
                 + "<meta name=viewport content=\"width=device-width,initial-scale=1\"><title>DFSK Helper</title><style>"
                 + "body{font:17px -apple-system,system-ui,sans-serif;margin:0;padding:16px;background:#f4f4f6;color:#111}"
                 + "h1{font-size:22px}h2{font-size:17px;margin:22px 0 8px}table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px}"

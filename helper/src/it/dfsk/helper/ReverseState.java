@@ -12,7 +12,7 @@ public final class ReverseState {
 
     private boolean reversing, ducked;
     private long duckAt = -1, stopAt = -1;
-    public volatile String lastEvent = "nessuno";
+    public volatile String lastEvent = Lang.t("nessuno", "none");
 
     /** Real BACKCAR_START seen. @return true if the ducking focus must be requested now. */
     public synchronized boolean onStart(long now, int mode, boolean inCall) {

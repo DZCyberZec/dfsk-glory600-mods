@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="volume_desc">Solo durante una chiamata CarPlay, i tasti volume del volante regolano il volume della chiamata invece di quello della musica. Fuori dalle chiamate non intercetta nessun tasto.</string>
+    <string name="volume_desc">Only during a CarPlay call, the steering-wheel volume keys change the call volume instead of the music volume. Outside calls no key is intercepted.</string>
 </resources>

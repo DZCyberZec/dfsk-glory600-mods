@@ -34,54 +34,56 @@ public class MainActivity extends Activity {
         int p = (int) (24 * getResources().getDisplayMetrics().density);
         l.setPadding(p, p, p, p);
 
-        l.addView(title("Musica in retromarcia (CarPlay)"));
-        l.addView(choice(HelperService.MODE_NAMES, Prefs.reverseMode(this), new Pick() {
+        l.addView(title(Lang.t("Musica in retromarcia (CarPlay)", "Music in reverse (CarPlay)")));
+        l.addView(choice(HelperService.modeNames(), Prefs.reverseMode(this), new Pick() {
             public void on(int i) { HelperService.setReverseMode(MainActivity.this, i); refresh(); }
         }));
-        l.addView(note("Pausa: come in origine. Attenuata: la musica continua, abbassata dall'auto. "
+        l.addView(note(Lang.t("Pausa: come in origine. Attenuata: la musica continua, abbassata dall'auto. "
                 + "Più bassa: in più l'app abbassa la musica CarPlay finché resti in retromarcia (max 3 minuti). "
-                + "Telecamera, sensori e chiamate non cambiano."));
-        l.addView(toggle("Volume chiamata dal volante", Prefs.CALL_VOLUME, true));
-        l.addView(note("Durante una chiamata CarPlay i tasti volume del volante regolano il volume della chiamata."));
+                + "Telecamera, sensori e chiamate non cambiano.", "Pause: stock behaviour. Ducked: music keeps playing, lowered by the car. "
+                + "Lower: the app also lowers CarPlay music while you stay in reverse (max 3 minutes). "
+                + "Camera, sensors and calls are not affected.")));
+        l.addView(toggle(Lang.t("Volume chiamata dal volante", "Call volume from steering wheel"), Prefs.CALL_VOLUME, true));
+        l.addView(note(Lang.t("Durante una chiamata CarPlay i tasti volume del volante regolano il volume della chiamata.", "During a CarPlay call the steering-wheel volume keys change the call volume.")));
 
         if (Sys.isSystem()) {
-            l.addView(toggle("Home in italiano all'avvio", Prefs.HOME_FIX, true));
-            l.addView(note("20 secondi dopo l'accensione riavvia una volta la Home, così prende le traduzioni."));
-            l.addView(title("Microfono CarPlay"));
+            l.addView(toggle(Lang.t("Home in italiano all'avvio", "Translated Home at start-up"), Prefs.HOME_FIX, true));
+            l.addView(note(Lang.t("20 secondi dopo l'accensione riavvia una volta la Home, così prende le traduzioni.", "20 seconds after start-up it restarts the Home once, so it picks up the translations.")));
+            l.addView(title(Lang.t("Microfono CarPlay", "CarPlay microphone")));
             int mic = Sys.micLevel();
             l.addView(choice(new String[]{"1", "2", "3"}, mic >= 1 && mic <= 3 ? mic - 1 : -1, new Pick() {
                 public void on(int i) { Sys.setMic(i + 1); refresh(); }
             }));
-            l.addView(note("Guadagno del microfono per chiamate e vocali CarPlay. Consigliato: 1."));
+            l.addView(note(Lang.t("Guadagno del microfono per chiamate e vocali CarPlay. Consigliato: 1.", "Microphone gain for CarPlay calls and voice. Recommended: 1.")));
             Switch adb = new Switch(this);
-            adb.setText("Accesso Mac (ADB Wi-Fi)");
+            adb.setText(Lang.t("Accesso Mac (ADB Wi-Fi)", "Computer access (ADB Wi-Fi)"));
             adb.setTextSize(20);
             adb.setChecked(Sys.adbPort() > 0);
             adb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 public void onCheckedChanged(CompoundButton v, boolean on) { Sys.setAdbWifi(MainActivity.this, on); refresh(); }
             });
             l.addView(adb);
-            l.addView(note("Porta 5555. Si spegne da solo al riavvio dell'auto."));
+            l.addView(note(Lang.t("Porta 5555. Si spegne da solo al riavvio dell'auto.", "Port 5555. Turns itself off when the car restarts.")));
             Switch voice = new Switch(this);
-            voice.setText("Voce di benvenuto all'avvio");
+            voice.setText(Lang.t("Voce di benvenuto all'avvio", "Welcome voice at start-up"));
             voice.setTextSize(20);
             voice.setChecked(Sys.welcomeVoice(this));
             voice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 public void onCheckedChanged(CompoundButton v, boolean on) { Sys.setWelcomeVoice(MainActivity.this, on); refresh(); }
             });
             l.addView(voice);
-            l.addView(note("La frase \"Hi, I'm Glory\" all'accensione. Vale dalla prossima accensione."));
-            l.addView(toggle("Pannello web (iPhone)", Prefs.WEB, false));
+            l.addView(note(Lang.t("La frase \"Hi, I'm Glory\" all'accensione. Vale dalla prossima accensione.", "The \"Hi, I'm Glory\" phrase at start-up. Applies from the next start.")));
+            l.addView(toggle(Lang.t("Pannello web (iPhone)", "Web panel (iPhone)"), Prefs.WEB, false));
             webBox = new LinearLayout(this);
             webBox.setOrientation(LinearLayout.VERTICAL);
-            webBox.addView(note("Inquadra il QR con la fotocamera dell'iPhone (stessa rete Wi-Fi). Vale 5 minuti, una volta sola."));
+            webBox.addView(note(Lang.t("Inquadra il QR con la fotocamera dell'iPhone (stessa rete Wi-Fi). Vale 5 minuti, una volta sola.", "Scan the QR with the iPhone camera (same Wi-Fi). Valid 5 minutes, once.")));
             qr = new ImageView(this);
             webBox.addView(qr);
             pin = note("");
             webBox.addView(pin);
             LinearLayout row = new LinearLayout(this);
-            row.addView(button("Nuovo QR", new View.OnClickListener() { public void onClick(View v) { refreshQr(true); } }));
-            row.addView(button("Nuovo PIN", new View.OnClickListener() {
+            row.addView(button(Lang.t("Nuovo QR", "New QR"), new View.OnClickListener() { public void onClick(View v) { refreshQr(true); } }));
+            row.addView(button(Lang.t("Nuovo PIN", "New PIN"), new View.OnClickListener() {
                 public void onClick(View v) { Prefs.newPin(MainActivity.this); refreshQr(true); refresh(); }
             }));
             webBox.addView(row);
@@ -123,7 +125,7 @@ public class MainActivity extends Activity {
         } else {
             qr.setVisibility(View.GONE);
         }
-        pin.setText((base == null ? "Nessuna rete Wi-Fi: collega l'auto all'hotspot dell'iPhone." : "Indirizzo: " + base)
+        pin.setText((base == null ? Lang.t("Nessuna rete Wi-Fi: collega l'auto all'hotspot dell'iPhone.", "No Wi-Fi: connect the car to the iPhone hotspot.") : Lang.t("Indirizzo: ", "Address: ") + base)
                 + "\nPIN: " + Prefs.pin(this));
     }
 

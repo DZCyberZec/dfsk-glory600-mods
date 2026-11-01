@@ -117,7 +117,7 @@ final class Sys {
                 tot++;
                 if ((Boolean) oi.getClass().getMethod("isEnabled").invoke(oi)) on++;
             }
-            return on + " attivi su " + tot;
+            return on + Lang.t(" attivi su ", " on of ") + tot;
         } catch (Throwable t) {
             return null;
         }
@@ -149,6 +149,6 @@ final class Sys {
                         sb.append(sb.length() > 0 ? ", " : "").append(a.getHostAddress()).append(" (").append(ni.getName()).append(')');
             }
         } catch (Throwable ignored) { }
-        return sb.length() == 0 ? "nessuna rete" : sb.toString();
+        return sb.length() == 0 ? Lang.t("nessuna rete", "no network") : sb.toString();
     }
 }

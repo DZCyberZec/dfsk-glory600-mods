@@ -87,8 +87,8 @@ final class Weather {
     /** Town name from OpenStreetMap Nominatim (low rate: once per weather refresh). */
     private static String city(double lat, double lon) throws Exception {
         JSONObject a = new JSONObject(get(String.format(Locale.US,
-                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%.4f&lon=%.4f&zoom=10&accept-language=it",
-                lat, lon))).optJSONObject("address");
+                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%.4f&lon=%.4f&zoom=10&accept-language=%s",
+                lat, lon, Locale.getDefault().getLanguage()))).optJSONObject("address");
         if (a == null) return null;
         for (String k : new String[]{"city", "town", "village", "municipality", "county"})
             if (a.has(k)) return a.getString(k);

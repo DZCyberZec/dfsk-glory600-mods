@@ -50,6 +50,8 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 | [`icons/`](icons) | "Aurora" icon set (generator + SVG) | ✅ |
 | [`docs/`](docs) | Install / restore guide, technical notes for developers | – |
 
+**Language:** both apps are in English, and switch to Italian automatically when the unit's language is Italian. More languages welcome: the texts are in `Logic.t()` / `Lang.t()` calls.
+
 **Note:** on the author's car these were signed with a different key. The builds in this repo use your own key; they compile, but the Home climate control and the overlays still need a test with this signing. Please report in Issues.
 
 ### Home CyberZec
@@ -76,6 +78,9 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 | CarPlay | SpeedPlay `com.suding.speedplay` (wired) |
 
 Other units with the same Yato1 / AC8257 platform and BW apps (e.g. DFSK E5 `DFSK-S508L-G`, other DFSK / Seres models) may work but are **not tested**. If you try, open an Issue with your `OS_…` and `MCU_…` versions (Settings → System info).
+
+## Restore to stock
+Going to the dealership? `./restore_stock.sh` (dry run first, then `--yes`) removes Home CyberZec, DFSK Helper and the translations and brings back the stock Home. Nothing is written to `/system`. Details: [docs/INSTALL.md](docs/INSTALL.md#restore-to-stock).
 
 ## Build
 No Gradle. Needs Android SDK build-tools 35.0.0, platform android-28, a JDK.

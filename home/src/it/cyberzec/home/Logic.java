@@ -4,25 +4,30 @@ package it.cyberzec.home;
 final class Logic {
     private Logic() {}
 
+    /** Italian text when the unit is set to Italian, English otherwise. */
+    static String t(String it, String en) {
+        return "it".equals(java.util.Locale.getDefault().getLanguage()) ? it : en;
+    }
+
     /** Level shown with half steps: each key press moves the unit 0.5 (28.0 = 4, 28.5 = "4,5"; level 0 does not exist). */
     static String climaLevelText(float vhalTemp) {
         float lv = vhalTemp >= 25f ? vhalTemp - 24f : vhalTemp - 25f;
         int whole = (int) lv;
-        return lv == whole ? String.valueOf(whole) : (lv < 0 && whole == 0 ? "-0" : String.valueOf(whole)) + ",5";
+        return lv == whole ? String.valueOf(whole) : (lv < 0 && whole == 0 ? "-0" : String.valueOf(whole)) + t(",5", ".5");
     }
 
-    /** WMO weather code (Open-Meteo) to short Italian text. */
+    /** WMO weather code (Open-Meteo) to short text. */
     static String meteoText(int code) {
-        if (code == 0) return "Sereno";
-        if (code <= 2) return "Poco nuvoloso";
-        if (code == 3) return "Nuvoloso";
-        if (code == 45 || code == 48) return "Nebbia";
-        if (code >= 51 && code <= 57) return "Pioviggine";
-        if (code >= 61 && code <= 67) return "Pioggia";
-        if (code >= 71 && code <= 77) return "Neve";
-        if (code >= 80 && code <= 82) return "Rovesci";
-        if (code == 85 || code == 86) return "Rovesci di neve";
-        if (code >= 95) return "Temporale";
+        if (code == 0) return t("Sereno", "Clear");
+        if (code <= 2) return t("Poco nuvoloso", "Partly cloudy");
+        if (code == 3) return t("Nuvoloso", "Cloudy");
+        if (code == 45 || code == 48) return t("Nebbia", "Fog");
+        if (code >= 51 && code <= 57) return t("Pioviggine", "Drizzle");
+        if (code >= 61 && code <= 67) return t("Pioggia", "Rain");
+        if (code >= 71 && code <= 77) return t("Neve", "Snow");
+        if (code >= 80 && code <= 82) return t("Rovesci", "Showers");
+        if (code == 85 || code == 86) return t("Rovesci di neve", "Snow showers");
+        if (code >= 95) return t("Temporale", "Thunderstorm");
         return "—";
     }
 
@@ -37,7 +42,9 @@ final class Logic {
         return "pioggia";
     }
 
-    static final String[] MODE_NAMES = {"Viso", "Viso + piedi", "Piedi", "Piedi + vetro"};
+    static String modeName(int m) {
+        return new String[]{t("Viso", "Face"), t("Viso + piedi", "Face + feet"), t("Piedi", "Feet"), t("Piedi + vetro", "Feet + glass")}[m];
+    }
 
     /** Short label for the big in-car chip. */
     static String internetShort(boolean connected, boolean wifi, boolean metered) {

@@ -12,7 +12,7 @@ rm -rf $OUT && mkdir -p $OUT/classes $OUT/testclasses $OUT/res
 
 # 1. JVM self-checks of the pure-Java logic
 "$JAVA_HOME/bin/javac" --release 8 -nowarn -Xlint:-options -d $OUT/testclasses \
-    src/it/dfsk/helper/{CallState,ReverseState,WebAuth,WebPanel,QrEncoder}.java test/*.java
+    src/it/dfsk/helper/{CallState,ReverseState,WebAuth,WebPanel,QrEncoder,Lang}.java test/*.java
 for t in CallStateTest ReverseStateTest WebTest; do "$JAVA_HOME/bin/java" -ea -cp $OUT/testclasses $t; done
 
 # 2. resources

@@ -16,7 +16,22 @@
 ## Updates
 `adb install -r <apk>` keeps settings and the Home choice (same signing key needed).
 
-## Restore to stock (before dealership service)
+## Restore to stock
+Use it before dealership service or warranty work, or any time you want to hide the mods.
+
+**What it removes:** Home CyberZec (`it.cyberzec.home`), DFSK Helper (`it.dfsk.helper`) and every Italian overlay (`it.dfsk.overlay.*`), and it sets the stock Home (`com.android.launcher3/.Launcher`) back as default. Apps you installed yourself (for example E5 Launcher Plus) are left alone; remove them by hand if you want.
+
+**No trace in /system:** these mods never write to `/system`, so after removal the unit is exactly as the factory left it.
+
+Automatic (needs adb on your computer, car on, adb connected):
+```
+./restore_stock.sh            # dry run: only lists what it would do
+./restore_stock.sh --yes      # really do it
+./restore_stock.sh -s 192.168.x.x:5555 --yes   # pick a device (or env ADB_SERIAL)
+```
+The script ends with OK or the list of what is still installed. Then **restart the infotainment** (or turn the car off and on) so the stock Home reloads its original texts.
+
+Manual fallback:
 ```
 adb shell cmd package set-home-activity com.android.launcher3/.Launcher
 adb uninstall it.cyberzec.home
@@ -24,4 +39,7 @@ adb uninstall it.dfsk.helper
 adb shell cmd overlay list | grep it.dfsk.overlay   # then for each one:
 adb uninstall it.dfsk.overlay.<name>
 ```
-Nothing else on the unit was changed by these apps.
+
+If you changed the microphone gain property `persist.suding.mic.gainlevel.default`, set it back to `5`.
+
+**Reinstall afterwards:** repeat the steps in "Install" above (APKs, then set Home CyberZec as default, then enable the overlays).

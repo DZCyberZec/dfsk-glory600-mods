@@ -67,12 +67,12 @@ public class HomeActivity extends Activity {
 
     /** The 6 apps of the bottom bar: package, activity (from BWLauncher3 AppUtil), label, Aurora icon. */
     static final Object[][] DOCK = {
-            {"com.bw.adas", "com.bw.adas.avm.AvmActivity", "Vista 360°", R.drawable.ic_avm},
-            {"com.bw.phone", "com.bw.phone.MainActivity", "Telefono", R.drawable.ic_phone},
+            {"com.bw.adas", "com.bw.adas.avm.AvmActivity", Logic.t("Vista 360°", "360° view"), R.drawable.ic_avm},
+            {"com.bw.phone", "com.bw.phone.MainActivity", Logic.t("Telefono", "Phone"), R.drawable.ic_phone},
             {"com.bw.mediaplayer", "com.bw.mediaplayer.activity.MainActivity", "Media", R.drawable.ic_media},
             {"com.bw.driverassistance", "com.bw.driverassistance.DvrActivity", "Dashcam", R.drawable.ic_dvr},
-            {"com.bw.settings", "com.bw.settings.CarSetting", "Veicolo", R.drawable.ic_car_setting},
-            {"com.bw.settings", "com.bw.settings.MainActivity", "Impostazioni", R.drawable.ic_setting},
+            {"com.bw.settings", "com.bw.settings.CarSetting", Logic.t("Veicolo", "Vehicle"), R.drawable.ic_car_setting},
+            {"com.bw.settings", "com.bw.settings.MainActivity", Logic.t("Impostazioni", "Settings"), R.drawable.ic_setting},
     };
     /** Hidden by default (owner's list, 01/11); the owner can show them again from the grid. */
     static final String[] HIDDEN = {"com.longsys.smart", "com.bw.dualinteraction", "com.navitel",
@@ -200,7 +200,7 @@ public class HomeActivity extends Activity {
     private void updateStatus() {
         boolean carplay = Settings.Secure.getInt(getContentResolver(), "bw.carplay.connect.state", 0) != 0;
         show(chipCarplay, carplay);
-        cpStatus.setText(carplay ? "Connesso" : "Non collegato");
+        cpStatus.setText(carplay ? Logic.t("Connesso", "Connected") : Logic.t("Non collegato", "Not connected"));
         cpStatus.setTextColor(carplay ? LIME : MUT);
 
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -221,7 +221,7 @@ public class HomeActivity extends Activity {
 
         float out = hvac.getFloat(Hvac.OUTSIDE_TEMP, 0);
         show(chipOutside, !Float.isNaN(out));
-        if (!Float.isNaN(out)) chipOutside.setText("Est. " + Math.round(out) + "°");
+        if (!Float.isNaN(out)) chipOutside.setText(Logic.t("Est. ", "Out ") + Math.round(out) + "°");
 
         boolean due = weather.stale() || !prefs.contains("city");
         if (online && due && prefs.contains("lat") && SystemClock.elapsedRealtime() - lastWeatherTry > 60_000) {
@@ -269,15 +269,15 @@ public class HomeActivity extends Activity {
 
     private void showWeather(Weather.Data d) {
         if (d == null) {
-            mCity.setText(prefs.contains("lat") ? "Posizione trovata" : "In attesa del GPS");
+            mCity.setText(prefs.contains("lat") ? Logic.t("Posizione trovata", "Location found") : Logic.t("In attesa del GPS", "Waiting for GPS"));
             mTemp.setText("--°");
-            mText.setText(prefs.contains("lat") ? "In attesa di Internet" : "Serve la posizione");
+            mText.setText(prefs.contains("lat") ? Logic.t("In attesa di Internet", "Waiting for Internet") : Logic.t("Serve la posizione", "Location needed"));
             mMinMax.setText("");
             mIcon.setImageResource(R.drawable.w_nubi);
             for (int i = 0; i < 6; i++) { mHour[i].setText(""); mHourT[i].setText(""); }
             return;
         }
-        mCity.setText(d.city != null ? d.city : "Posizione GPS");
+        mCity.setText(d.city != null ? d.city : Logic.t("Posizione GPS", "GPS location"));
         mTemp.setText(d.temp + "°");
         mText.setText(d.text);
         mMinMax.setText(d.max + "° / " + d.min + "°");
@@ -286,7 +286,7 @@ public class HomeActivity extends Activity {
             mHour[i].setText(d.hours[i] == null ? "" : d.hours[i]);
             mHourT[i].setText(d.hours[i] == null ? "" : d.hourTemps[i] + "°");
         }
-        mHour[5].setText("Pioggia");
+        mHour[5].setText(Logic.t("Pioggia", "Rain"));
         mHourT[5].setText(d.rainPct + "%");
     }
 
@@ -300,14 +300,14 @@ public class HomeActivity extends Activity {
             boolean front = ready && hvac.getBool(Hvac.DEFROST, Hvac.AREA_FRONT_WINDOW);
             int mode = on ? hvac.getInt(Hvac.MODE, Hvac.AREA_ROW) : -1;
 
-            climaState.setText(!ready ? "Non disponibile" : on ? "Acceso" : "Spento");
+            climaState.setText(!ready ? Logic.t("Non disponibile", "Not available") : on ? Logic.t("Acceso", "On") : Logic.t("Spento", "Off"));
             climaState.setTextColor(on ? LIME : MUT);
             // same look as the other switches: lime = on
             climaPowerIcon.setColorFilter(on ? DARK : TXT, PorterDuff.Mode.SRC_IN);
             climaPower.setBackground(on ? round(LIME, 999, LIME) : round(0x0DFFFFFF, 999, LINE));
 
             setFan(fan);
-            fanText.setText(on ? "Ventola  " + fan + "/8" : "Ventola");
+            fanText.setText(on ? Logic.t("Ventola  ", "Fan  ") + fan + "/8" : Logic.t("Ventola", "Fan"));
             float t = ready ? hvac.getFloat(Hvac.TEMP, Hvac.AREA_TEMP) : Float.NaN;
             // this car is level-only (secure offline_hvac_type=0): never degrees
             climaLevel.setText(Float.isNaN(t) ? "—" : Logic.climaLevelText(t));
@@ -330,13 +330,13 @@ public class HomeActivity extends Activity {
         Log.e(Hvac.TAG, "scelta modalita " + m);
         if (!hvac.setMode(m)) { notAvailable(); return; }
         if (hvac.getBool(Hvac.DEFROST, Hvac.AREA_FRONT_WINDOW))   // the unit keeps the air on the windscreen
-            Toast.makeText(this, "Parabrezza acceso: l'aria resta sul vetro finché non lo spegni", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, Logic.t("Parabrezza acceso: l'aria resta sul vetro finché non lo spegni", "Windscreen defrost is on: air stays on the glass until you turn it off"), Toast.LENGTH_LONG).show();
         h.postDelayed(updateClima, 900);
         h.postDelayed(updateClima, 1800);
     }
 
     private void notAvailable() {
-        Toast.makeText(this, "Clima non disponibile", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, Logic.t("Clima non disponibile", "Climate not available"), Toast.LENGTH_SHORT).show();
     }
 
     private void press(int key) {
@@ -397,7 +397,7 @@ public class HomeActivity extends Activity {
         chipCarplay = chip(chips, R.drawable.st_phone, LIME, "CarPlay");
         chipNet = chip(chips, R.drawable.st_wifi, LIME, "Internet");
         chipNetIcon = (ImageView) ((ViewGroup) chipNet.getParent()).getChildAt(0);
-        chipMeteo = chip(chips, R.drawable.st_weather, TEAL, "Meteo");
+        chipMeteo = chip(chips, R.drawable.st_weather, TEAL, Logic.t("Meteo", "Weather"));
         chipGps = chip(chips, R.drawable.st_gps, LIME, "GPS");
         chipOutside = chip(chips, R.drawable.st_temp, TEAL, "");
         top.addView(chips, new LinearLayout.LayoutParams(0, -2, 1));
@@ -450,7 +450,7 @@ public class HomeActivity extends Activity {
         wlp.leftMargin = px(95);   // just right of the phone
         art.addView(waves, wlp);
 
-        TextView cta = text("Avvia CarPlay", 36, DARK, true);
+        TextView cta = text(Logic.t("Avvia CarPlay", "Start CarPlay"), 36, DARK, true);
         cta.setGravity(Gravity.CENTER);
         cta.setBackground(round(LIME, 18, 0));
         cta.setOnClickListener(new View.OnClickListener() {
@@ -466,7 +466,7 @@ public class HomeActivity extends Activity {
         LinearLayout c = card(18);
         LinearLayout head = hbox();
         head.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = label("Clima");
+        TextView title = label(Logic.t("Clima", "Climate"));
         title.setOnClickListener(new View.OnClickListener() {   // opens the full climate app
             @Override public void onClick(View v) {
                 launch("com.bw.ac", "com.bw.ac.activity.MainActivity");
@@ -479,7 +479,7 @@ public class HomeActivity extends Activity {
         climaPower.setGravity(Gravity.CENTER);
         climaPowerIcon = new ImageView(this);
         climaPowerIcon.setImageResource(R.drawable.ic_power);
-        climaPower.setContentDescription("Accendi o spegni il clima");
+        climaPower.setContentDescription(Logic.t("Accendi o spegni il clima", "Turn climate on or off"));
         climaPower.addView(climaPowerIcon, new LinearLayout.LayoutParams(px(38), px(38)));
         climaPower.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -493,7 +493,7 @@ public class HomeActivity extends Activity {
 
         LinearLayout row = hbox();
         LinearLayout lvGroup = vbox();
-        climaUnit = text("Livello", 22, MUT, true);
+        climaUnit = text(Logic.t("Livello", "Level"), 22, MUT, true);
         lvGroup.addView(climaUnit);
         LinearLayout lv = hbox();
         lv.setGravity(Gravity.CENTER_VERTICAL);
@@ -506,7 +506,7 @@ public class HomeActivity extends Activity {
         row.addView(lvGroup);
 
         LinearLayout fanGroup = vbox();
-        fanText = text("Ventola", 22, MUT, true);
+        fanText = text(Logic.t("Ventola", "Fan"), 22, MUT, true);
         fanGroup.addView(fanText);
         LinearLayout fanBox = hbox();
         fanBox.setGravity(Gravity.CENTER_VERTICAL);
@@ -532,7 +532,7 @@ public class HomeActivity extends Activity {
             ImageView iv = new ImageView(this);
             iv.setImageResource(getResources().getIdentifier("mode_" + i, "drawable", getPackageName()));
             cell.addView(iv, new LinearLayout.LayoutParams(px(50), px(50)));
-            TextView t = text(Logic.MODE_NAMES[i], 23, TXT, true);
+            TextView t = text(Logic.modeName(i), 23, TXT, true);
             t.setSingleLine();
             cell.addView(t, margins(-2, -2, 0, 0, 0, 0));
             cell.setOnClickListener(new View.OnClickListener() {
@@ -550,9 +550,9 @@ public class HomeActivity extends Activity {
 
         LinearLayout tg = hbox();
         tAc = toggleView(tg, "A/C", Hvac.KEY_AC);
-        tRecirc = toggleView(tg, "Ricircolo", Hvac.KEY_RECIRC);
-        tDefrost = toggleView(tg, "Parabrezza", Hvac.KEY_DEFROST);
-        tRear = toggleView(tg, "Lunotto", Hvac.KEY_REAR_DEFROST);
+        tRecirc = toggleView(tg, Logic.t("Ricircolo", "Recirculation"), Hvac.KEY_RECIRC);
+        tDefrost = toggleView(tg, Logic.t("Parabrezza", "Windscreen"), Hvac.KEY_DEFROST);
+        tRear = toggleView(tg, Logic.t("Lunotto", "Rear window"), Hvac.KEY_REAR_DEFROST);
         c.addView(tg, margins(-1, px(62), 0, 10, 0, 0));
         return c;
     }
@@ -716,7 +716,7 @@ public class HomeActivity extends Activity {
             comps.add(c);
             names.add(appName(c));
         }
-        choose("Al posto di " + appName(d[slot]), names.toArray(new String[0]), new Choice() {
+        choose(Logic.t("Al posto di ", "Instead of ") + appName(d[slot]), names.toArray(new String[0]), new Choice() {
             @Override public void on(int which) {
                 d[slot] = comps.get(which);
                 home.edit().putString("dock", TextUtils.join(",", d)).apply();
@@ -751,8 +751,8 @@ public class HomeActivity extends Activity {
     private void appMenu(final String pkg, final String cls) {
         final String[] d = dockApps();
         String[] items = new String[d.length + 1];
-        for (int i = 0; i < d.length; i++) items[i] = "Nella barra al posto di " + appName(d[i]);
-        items[d.length] = "Nascondi questa app";
+        for (int i = 0; i < d.length; i++) items[i] = Logic.t("Nella barra al posto di ", "In the bar instead of ") + appName(d[i]);
+        items[d.length] = Logic.t("Nascondi questa app", "Hide this app");
         choose(appName(pkg + "/" + cls), items, new Choice() {
             @Override public void on(int which) {
                 if (which < d.length) {
@@ -772,7 +772,7 @@ public class HomeActivity extends Activity {
         final List<String> h = hiddenInstalled();
         String[] names = new String[h.size()];
         for (int i = 0; i < names.length; i++) names[i] = appName(h.get(i));
-        choose("Tocca per far ricomparire", names, new Choice() {
+        choose(Logic.t("Tocca per far ricomparire", "Tap to show again"), names, new Choice() {
             @Override public void on(int which) {
                 Set<String> set = hidden();
                 set.remove(h.get(which));
@@ -810,7 +810,7 @@ public class HomeActivity extends Activity {
                         cb.on(which);
                     }
                 })
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(Logic.t("Annulla", "Cancel"), null)
                 .show();
     }
 
@@ -847,13 +847,13 @@ public class HomeActivity extends Activity {
             page.setPadding(px(36), px(28), px(36), px(28));
             LinearLayout head = hbox();
             head.setGravity(Gravity.CENTER_VERTICAL);
-            TextView title = text("Tutte le app", 44, TXT, true);
+            TextView title = text(Logic.t("Tutte le app", "All apps"), 44, TXT, true);
             head.addView(title);
             head.addView(text((p + 1) + " / " + pages, 28, MUT, true), margins(0, -2, 20, 0, 0, 0));
             ((LinearLayout.LayoutParams) head.getChildAt(1).getLayoutParams()).weight = 1;
             int nHidden = hiddenInstalled().size();
             if (nHidden > 0) {
-                TextView hid = text("Nascoste (" + nHidden + ")", 28, MUT, true);
+                TextView hid = text(Logic.t("Nascoste (", "Hidden (") + nHidden + ")", 28, MUT, true);
                 hid.setGravity(Gravity.CENTER);
                 hid.setPadding(px(22), 0, px(22), 0);
                 hid.setBackground(round(0xCC111B1C, 999, LINE));
@@ -964,7 +964,7 @@ public class HomeActivity extends Activity {
         } catch (Exception e) {
             Log.i(TAG, "avvio " + pkg + " fallito: " + e);
         }
-        Toast.makeText(this, "App non disponibile", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, Logic.t("App non disponibile", "App not available"), Toast.LENGTH_SHORT).show();
     }
 
     private String iphoneName() {

@@ -41,7 +41,9 @@ public class HelperService extends Service {
     static final long ARM_DELAY_MS = 800; // after the last STOP (reverse + AVM both send one), see README
     static final long HOME_FIX_DELAY_MS = 20_000, HOME_FIX_RETRY_MS = 10_000;
     static final int WEB_PORT = 8091;
-    static final String[] MODE_NAMES = {"Pausa", "Attenuata", "Più bassa"};
+    static String[] modeNames() {
+        return new String[]{Lang.t("Pausa", "Pause"), Lang.t("Attenuata", "Ducked"), Lang.t("Più bassa", "Lower")};
+    }
 
     private final Handler h = new Handler(Looper.getMainLooper());
     private MediaSession session;
@@ -60,12 +62,12 @@ public class HelperService extends Service {
             if (BACKCAR_START.equals(a)) {
                 // Implicit broadcast from BwCarSource (MCU -> VHAL SYSTEM_[AVM_]REVERSE_STATUS). Our own arm is package-targeted, so it never arrives here.
                 boolean duck = ReverseState.INSTANCE.onStart(now, Prefs.reverseMode(c), inCall());
-                event("inizio retromarcia");
+                event(Lang.t("inizio retromarcia", "reverse start"));
                 if (duck) requestDuck();
                 h.postDelayed(duckCheck, ReverseState.TIMEOUT_MS + 50);
             } else if (BACKCAR_STOP.equals(a)) {
                 ReverseState.INSTANCE.onStop(now);
-                event("fine retromarcia");
+                event(Lang.t("fine retromarcia", "reverse end"));
                 h.postDelayed(duckCheck, ReverseState.STOP_DEBOUNCE_MS + 50);
                 scheduleArm();
             } else if (SP.equals(a)) {
@@ -99,7 +101,7 @@ public class HelperService extends Service {
     static void setReverseMode(Context c, int mode) {
         int old = Prefs.reverseMode(c);
         Prefs.get(c).edit().putInt(Prefs.REVERSE_MODE, mode).apply();
-        Log.i(TAG, "reverse mode " + MODE_NAMES[old] + " -> " + MODE_NAMES[mode]);
+        Log.i(TAG, "reverse mode " + modeNames()[old] + " -> " + modeNames()[mode]);
         if (mode == ReverseState.PAUSE && old != ReverseState.PAUSE) {
             // disarm: clears SpeedPlay's flag (no PLAY is sent because the arm never recorded audio focus)
             sendToSpeedPlay(c, BACKCAR_STOP, false);
@@ -130,7 +132,7 @@ public class HelperService extends Service {
     private void event(String what) {
         String s = new SimpleDateFormat("HH:mm:ss", Locale.ITALY).format(new Date()) + " " + what;
         ReverseState.INSTANCE.lastEvent = s;
-        Log.i(TAG, "reverse event: " + what + " (mode=" + MODE_NAMES[Prefs.reverseMode(this)] + ")");
+        Log.i(TAG, "reverse event: " + what + " (mode=" + modeNames()[Prefs.reverseMode(this)] + ")");
     }
 
     private boolean inCall() {
@@ -259,27 +261,28 @@ public class HelperService extends Service {
             ver = pi.versionName + " (" + pi.versionCode + ")";
         } catch (Exception ignored) { }
         boolean sys = Sys.isSystem();
-        m.put("Versione", ver + (sys ? ", variante di sistema" : ", variante utente"));
+        m.put(Lang.t("Versione", "Version"), ver + (sys ? Lang.t(", variante di sistema", ", system build") : Lang.t(", variante utente", ", user build")));
         String why = unsafeReason();
-        m.put("Retromarcia", why == null ? "compatibile" : "disattivata per sicurezza (" + why + ")");
-        m.put("Musica in retromarcia", MODE_NAMES[Prefs.reverseMode(c)] + (ReverseState.INSTANCE.isDucked() ? " (abbassata ora)" : ""));
-        m.put("Ultimo evento retro", ReverseState.INSTANCE.lastEvent);
-        m.put("Chiamata CarPlay attiva", CallState.INSTANCE.isActive(SystemClock.elapsedRealtime()) ? "sì" : "no");
-        m.put("Volume chiamata dal volante", Prefs.callVolume(c) ? "attivo" : "spento");
-        m.put("Log DFSKHelper", Log.isLoggable(TAG, Log.INFO) ? "visibili (livello INFO)"
-                : "filtrati dal sistema: adb shell setprop persist.log.tag.DFSKHelper I");
+        m.put(Lang.t("Retromarcia", "Reverse"), why == null ? Lang.t("compatibile", "compatible") : Lang.t("disattivata per sicurezza (", "disabled for safety (") + why + ")");
+        m.put(Lang.t("Musica in retromarcia", "Music in reverse"), modeNames()[Prefs.reverseMode(c)] + (ReverseState.INSTANCE.isDucked() ? Lang.t(" (abbassata ora)", " (lowered now)") : ""));
+        m.put(Lang.t("Ultimo evento retro", "Last reverse event"), ReverseState.INSTANCE.lastEvent);
+        m.put(Lang.t("Chiamata CarPlay attiva", "CarPlay call active"), CallState.INSTANCE.isActive(SystemClock.elapsedRealtime()) ? Lang.t("sì", "yes") : "no");
+        m.put(Lang.t("Volume chiamata dal volante", "Call volume from steering wheel"), Prefs.callVolume(c) ? Lang.t("attivo", "on") : Lang.t("spento", "off"));
+        m.put("Log DFSKHelper", Log.isLoggable(TAG, Log.INFO) ? Lang.t("visibili (livello INFO)", "visible (INFO level)")
+                : Lang.t("filtrati dal sistema: adb shell setprop persist.log.tag.DFSKHelper I", "filtered by the system: adb shell setprop persist.log.tag.DFSKHelper I"));
         if (sys) {
             int mic = Sys.micLevel();
-            m.put("Microfono CarPlay", mic > 0 ? Integer.toString(mic) : "predefinito");
+            m.put(Lang.t("Microfono CarPlay", "CarPlay microphone"), mic > 0 ? Integer.toString(mic) : Lang.t("predefinito", "default"));
             int port = Sys.adbPort();
-            m.put("ADB Wi-Fi", port > 0 ? "attivo (porta " + port + ")" : "spento");
-            m.put("Voce di benvenuto", Sys.welcomeVoice(c) ? "attiva" : "spenta");
+            m.put("ADB Wi-Fi", port > 0 ? Lang.t("attivo (porta ", "on (port ") + port + ")" : Lang.t("spento", "off"));
+            m.put(Lang.t("Voce di benvenuto", "Welcome voice"), Sys.welcomeVoice(c) ? Lang.t("attiva", "on") : Lang.t("spenta", "off"));
             String ov = Sys.overlays();
-            if (ov != null) m.put("Traduzioni (overlay)", ov);
-            m.put("Indirizzo IP", Sys.ips());
+            if (ov != null) m.put(Lang.t("Traduzioni (overlay)", "Translations (overlays)"), ov);
+            m.put(Lang.t("Indirizzo IP", "IP address"), Sys.ips());
         }
         String acc = Settings.Secure.getString(c.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        m.put("Accessibilità (facoltativa)", acc != null && acc.contains("it.dfsk.helper/") ? "attiva" : "non attiva");
+        m.put(Lang.t("Accessibilità (facoltativa)", "Accessibility (optional)"), acc != null && acc.contains("it.dfsk.helper/")
+                ? Lang.t("attiva", "on") : Lang.t("non attiva", "off"));
         return m;
     }
 
@@ -297,7 +300,7 @@ public class HelperService extends Service {
         f.addAction(BACKCAR_STOP);
         f.addAction(SP);
         registerReceiver(rx, f);
-        Log.i(TAG, "service created, system=" + Sys.isSystem() + " mode=" + MODE_NAMES[Prefs.reverseMode(this)]);
+        Log.i(TAG, "service created, system=" + Sys.isSystem() + " mode=" + modeNames()[Prefs.reverseMode(this)]);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -337,8 +340,8 @@ public class HelperService extends Service {
         }
         PendingIntent pi = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0);
         return b.setSmallIcon(android.R.drawable.ic_menu_manage)
-                .setContentTitle("DFSK Helper attivo")
-                .setContentText("Musica in retromarcia e volume chiamata")
+                .setContentTitle(Lang.t("DFSK Helper attivo", "DFSK Helper running"))
+                .setContentText(Lang.t("Musica in retromarcia e volume chiamata", "Music in reverse and call volume"))
                 .setContentIntent(pi).setOngoing(true).build();
     }
 }
