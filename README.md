@@ -35,6 +35,19 @@
 - **Call volume from the steering wheel** during CarPlay calls.
 - All options are switches in the app; status screen shows what the unit reports.
 
+## Tested on
+
+| | |
+|---|---|
+| Car | DFSK Glory 600 (2024, EU / Italy) |
+| Android model (`Build.MODEL`) | `DFSK_F508_G` |
+| Platform | Yato1, Autochips / MediaTek **AC8257**, Android 9 |
+| OS firmware | `OS_Yato1_DFSK-F508-G_01_V2.44.00_241107` |
+| MCU firmware | `MCU_Yato1_DFSK-F508-G_01_V1.18.00_241107` |
+| CarPlay | SpeedPlay `com.suding.speedplay` (wired) |
+
+Other units with the same Yato1 / AC8257 platform and BW apps (e.g. DFSK E5 `DFSK-S508L-G`, other DFSK / Seres models) may work but are **not tested**. If you try, open an Issue with your `OS_…` and `MCU_…` versions (Settings → System info).
+
 ## Build
 No Gradle. Needs Android SDK build-tools 35.0.0, platform android-28, a JDK.
 ```
