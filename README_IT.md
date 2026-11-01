@@ -39,6 +39,15 @@ Le build di questo repo usano una chiave tua: si compilano, ma clima della Home 
 
 **Provato su:** DFSK Glory 600 (acquistata a luglio 2025, Italia), modello Android `DFSK_F508_G`, piattaforma Yato1 AC8257, firmware `OS_Yato1_DFSK-F508-G_01_V2.44.00_241107`, MCU `MCU_Yato1_DFSK-F508-G_01_V1.18.00_241107`. Altre unità Yato1 (es. DFSK E5) non provate: se la provi apri una Issue con le tue versioni.
 
+## Cosa installo?
+Ogni app esiste in una sola versione: è in inglese e diventa italiana da sola se l'unità è impostata in italiano (Impostazioni → Lingua).
+- **Unità in italiano:** installa anche le traduzioni (`*_it_overlay.apk`) per avere in italiano le app di serie.
+- **Unità in inglese o altra lingua:** salta le traduzioni, servono solo per l'italiano.
+- **Scegli i pezzi:** solo retromarcia e volume chiamata → DFSK Helper; Home grande con clima e meteo → Home CyberZec; tutto → tutti e tre.
+- **Indeciso?** Parti dal solo DFSK Helper: è quello che cambia meno e `restore_stock.sh` lo toglie in un attimo.
+
+Dettagli: [docs/INSTALL.md – Step 0](docs/INSTALL.md#step-0--choose-what-you-want).
+
 ## Ripristino all'originale
 Prima del tagliando o di un intervento in garanzia: `./restore_stock.sh` (prima in prova, poi con `--yes`) toglie Home CyberZec, DFSK Helper e le traduzioni e rimette la Home di serie.
 Su `/system` non viene scritto nulla, quindi non resta alcuna traccia.

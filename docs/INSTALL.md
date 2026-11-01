@@ -1,5 +1,30 @@
 # Install and restore
 
+## Step 0 – choose what you want
+
+Every piece is independent: install only what you need.
+
+**1. Language.** There is one version of each app, not an Italian one and an English one.
+The apps follow the language of the head unit:
+
+| Head unit language (Settings → Language) | Home CyberZec and DFSK Helper show | Install the translation overlays? |
+|---|---|---|
+| Italiano | Italian | **Yes**: they translate the stock BW apps (camera, settings, climate…) |
+| English or any other | English | **No**: the overlays only add Italian. Skip step 4 below |
+
+Want another language? Copy `translations/<App>/values-it` to `values-<your language>` and translate; for the two apps, add your text to the `Logic.t()` / `Lang.t()` calls. Pull requests welcome.
+
+**2. Pieces.**
+
+| I want… | Install |
+|---|---|
+| Music not to stop in reverse, call volume from the steering wheel | `DFSK-Helper.apk` only |
+| A bigger home screen with climate control and weather | `HomeCyberZec.apk` (+ step 3) |
+| The stock apps in Italian | the `*_it_overlay.apk` files (step 4) |
+| Everything | all of the above |
+
+Not sure? Start with **DFSK Helper** alone: it changes the least, and `restore_stock.sh` removes it in seconds.
+
 ## Install (no computer needed)
 1. Install **E5 APK Manager** on the head unit (see the E5 Launcher community).
 2. Open its **Web Transfer**, open the shown address from your phone/PC on the same Wi-Fi, upload the APK, tap **Install** on the car.

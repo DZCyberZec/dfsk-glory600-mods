@@ -79,6 +79,9 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 
 Other units with the same Yato1 / AC8257 platform and BW apps (e.g. DFSK E5 `DFSK-S508L-G`, other DFSK / Seres models) may work but are **not tested**. If you try, open an Issue with your `OS_…` and `MCU_…` versions (Settings → System info).
 
+## Which one do I install?
+One version of each app, in English, switching to Italian when the head unit is set to Italian. The Italian translation overlays are only for units set to Italian. Pick only the pieces you want: see [docs/INSTALL.md – Step 0](docs/INSTALL.md#step-0--choose-what-you-want).
+
 ## Restore to stock
 Going to the dealership? `./restore_stock.sh` (dry run first, then `--yes`) removes Home CyberZec, DFSK Helper and the translations and brings back the stock Home. Nothing is written to `/system`. Details: [docs/INSTALL.md](docs/INSTALL.md#restore-to-stock).
 
