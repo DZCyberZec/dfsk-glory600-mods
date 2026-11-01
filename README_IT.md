@@ -9,6 +9,24 @@
 
 ![Pagina "Tutte le app" in auto: le app di serie hanno le icone Aurora](docs/car_all_apps.png)
 
+## Problemi risolti
+
+**CarPlay (SpeedPlay)**
+- **La musica si ferma ogni volta che metti la retromarcia** → DFSK Helper: *Attenuata* o *Più bassa*, la musica continua più bassa.
+- **I tasti volume al volante non cambiano il volume della chiamata** → DFSK Helper li collega alla chiamata CarPlay.
+- **Chi ti ascolta ti sente distorto** → il microfono di serie è ×5; a 1 si sente pulito (serve accesso di sistema, vedi note tecniche).
+- **Il Wi-Fi dell'auto cade appena accendi** → con il Bluetooth dell'iPhone acceso, CarPlay via Bluetooth occupa l'hotspot `ap0`. Usa il cavo o spegni il Bluetooth.
+
+**Clima**
+- **"Viso" non manda aria in faccia, il tasto MODE sembra non fare nulla** → è acceso lo sbrinamento parabrezza, che tiene l'aria sul vetro. La Home te lo segnala.
+- **Premo + e non cambia** → ogni tocco vale mezzo livello; la Home mostra "4,5".
+- **Il lunotto non si accende** → funziona solo a motore acceso.
+
+**Lingua e Home**
+- **App metà in inglese/cinese, telecamera bloccata in inglese** → traduzioni italiane per 16 app.
+- **Dopo l'accensione la Home ha ancora i testi vecchi** → la Home di serie parte prima delle traduzioni; riavviarla risolve.
+- **Testi piccoli, app inutili nell'elenco** → Home CyberZec: caratteri grandi, app nascondibili con pressione lunga.
+
 ## Cosa c'è
 - **`home/` – Home CyberZec**: Home grande e leggibile alla guida, clima completo (⏻, livello a mezzi scatti, ventola, 4 modalità aria, A/C, ricircolo, parabrezza, lunotto), meteo con città, stato CarPlay/Wi-Fi/GPS/temperatura esterna. **Si configura dall'app**: tieni premuta un'app per metterla nella barra o nasconderla.
 - **`helper/` – DFSK Helper**: la musica CarPlay non va più in pausa in retromarcia (Pausa / Attenuata / Più bassa); volume chiamata dai tasti al volante.
