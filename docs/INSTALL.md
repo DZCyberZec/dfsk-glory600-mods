@@ -26,6 +26,7 @@ Want another language? Copy `translations/<App>/values-it` to `values-<your lang
 Not sure? Start with **DFSK Helper** alone: it changes the least, and `restore_stock.sh` removes it in seconds.
 
 ## Install (no computer needed)
+0. Download the files from the [latest release](https://github.com/DZCyberZec/dfsk-glory600-mods/releases) (or build them, see the README).
 1. Install **E5 APK Manager** on the head unit (see the E5 Launcher community).
 2. Open its **Web Transfer**, open the shown address from your phone/PC on the same Wi-Fi, upload the APK, tap **Install** on the car.
 3. Home CyberZec: grant location when asked, then press Home and choose it.
