@@ -45,7 +45,9 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 | Folder | What it is | Tested on the car |
 |---|---|---|
 | [`home/`](home) | **Home CyberZec** – a driver-friendly launcher with real climate control | ✅ (see note below) |
-| [`helper/`](helper) | **CyberZec Set** – CarPlay music keeps playing in reverse, steering-wheel call volume | ✅ |
+| [`helper/`](helper) | **CyberZec Set** – CarPlay music keeps playing in reverse, steering-wheel call volume, web panel for the phone | ✅ |
+| [`keyboard/`](keyboard) | **Tastiera CyberZec** – big in-car keyboard (QWERTY, numbers, accents); receives text typed on the phone | ✅ |
+| [`iphone/`](iphone) | **CyberZec Remote** – iPhone app (SwiftUI) for the CyberZec Set web panel | ✅ |
 | [`translations/`](translations) | Italian translation of 16 stock apps, as RRO overlays | ✅ (see note below) |
 | [`icons/`](icons) | "Aurora" icon set (generator + SVG) | ✅ |
 | [`docs/`](docs) | Install / restore guide, technical notes for developers | – |
@@ -58,14 +60,24 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 - Big, glanceable UI (Android "Design for Driving" sizes): clock + date, CarPlay / Wi-Fi / GPS / outside-temperature chips.
 - **Climate control**: on/off, level in half steps (blue − / red +), fan 0–8, 4 air modes with icons, A/C, recirculation, windscreen and rear-window defrost. Shows the real state read from the car.
 - Weather by GPS (Open-Meteo, no API key) with city name, cached for offline use.
-- Swipe right for all apps.
+- Sky that follows real sunrise/sunset and the weather (light animation), darker theme at night, next hours forecast, rain warning.
+- Media card for whatever is playing (title, artist, cover, ⏮ ⏯ ⏭).
+- City search with a big on-screen keyboard; "Where did I park" from the last GPS fix.
+- Swipe right for all apps (big cards).
 - **Configure it from the app itself, no settings files:** long-press an app → put it in the bottom bar (6 slots) or hide it; "Hidden (N)" brings apps back.
 
 ### CyberZec Set (formerly DFSK Helper)
 - **Reverse gear + CarPlay**: stock unit pauses your music every time you reverse. Choose Pause (stock) / Ducked / Lower.
 - **Call volume from the steering wheel** during CarPlay calls.
 - **CarPlay microphone level** (1/2/3, recommended 1) for clear calls and voice messages.
+- **Music volume in reverse**: pick 100/75/50/25 % instead of the stock automatic duck.
+- **Web panel + QR / PIN** on the local network: change settings, set the Home weather city and greeting name, remote keys (back, home, media, volume), **type in the car** from the phone (goes to Tastiera CyberZec or the Home city search).
 - All options are switches in the app; status screen shows what the unit reports.
+- Some features need a system build and are disabled in the user app built here.
+
+### Tastiera CyberZec and CyberZec Remote
+- The keyboard is a normal input method: enable it in Android settings. Home, Set and the keyboard talk through a signature permission, so **build all three with the same keystore**.
+- iPhone app: open `iphone/DFSKRemote` in Xcode (or `xcodegen` from `project.yml`), set your own team, run. `iphone/fake_car/run.sh` starts the real web panel code with a fake car on your Mac for testing; `Tests/run.sh` runs the parser tests.
 
 ## Tested on
 
@@ -92,6 +104,7 @@ No Gradle. Needs Android SDK build-tools 35.0.0, platform android-28, a JDK.
 ```
 bash home/build.sh
 bash helper/build.sh
+bash keyboard/build.sh
 bash translations/build_overlays.sh   # needs framework-res.apk from your car, see the script header
 ```
 Each script runs its self-tests first.

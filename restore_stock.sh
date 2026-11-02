@@ -13,7 +13,7 @@ Usage: restore_stock.sh [-s <serial>] [--yes]
   -s <serial>   adb device serial / ip:port (or set ADB_SERIAL).
   -h, --help    Show this help.
 
-Removes: it.dfsk.overlay.* (Italian overlays), it.cyberzec.home, it.dfsk.helper.
+Removes: it.dfsk.overlay.* (Italian overlays), it.cyberzec.home, it.dfsk.helper, it.cyberzec.keyboard (Android switches back to another keyboard).
 Sets the home back to com.android.launcher3/.Launcher.
 Other apps (e.g. E5 Launcher Plus) are NOT touched.
 USAGE
@@ -44,7 +44,7 @@ fi
 [ "$("${ADB[@]}" get-state 2>/dev/null)" = "device" ] || { echo "ERROR: device not reachable${SERIAL:+ ($SERIAL)}."; exit 1; }
 
 STOCK_HOME="com.android.launcher3/.Launcher"
-APPS="it.cyberzec.home it.dfsk.helper"
+APPS="it.cyberzec.home it.dfsk.helper it.cyberzec.keyboard"
 
 pkgs=$("${ADB[@]}" shell pm list packages 2>/dev/null | tr -d '\r' | sed 's/^package://')
 has() { printf '%s\n' "$pkgs" | grep -qx "$1"; }

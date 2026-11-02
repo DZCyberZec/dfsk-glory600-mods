@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="it.dfsk.helper" android:versionCode="5" android:versionName="1.4">
+    package="it.dfsk.helper" android:versionCode="14" android:versionName="2.3">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="28" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- Home CyberZec settings/status (signature permission defined by the Home: install the Home first) -->
+    <uses-permission android:name="it.cyberzec.permission.SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application android:label="CyberZec Set" android:icon="@mipmap/ic_launcher"
         android:allowBackup="false">

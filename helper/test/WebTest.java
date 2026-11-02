@@ -92,8 +92,11 @@ public class WebTest {
         WebAuth wa = new WebAuth();
         wa.setPin("246810");
         panel = new WebPanel(new WebPanel.Backend() {
-            public Map<String, String> status() { Map<String, String> m = new LinkedHashMap<>(); m.put("Versione", "<1.2>"); return m; }
+            public Map<String, String> status() { Map<String, String> m = new LinkedHashMap<>(); m.put("Versione", "<1.2>"); m.put("Parcheggio", "45.46421,9.19003,1793632200000"); return m; }
             public boolean act(String x, String v) { acts.add(x + "=" + v); return true; }
+            public String[][] dynamic() { return new String[][]{{"city", "Città meteo", "gps", "GPS", "Milano|45.5|9.2", "Milano"},
+                    {"hotspot", "Hotspot automatico", "off", "Spento", "iPhone <Anna>", "iPhone <Anna>"}}; }
+            public String current(String x) { return "name".equals(x) ? "Anna \"<b>\"" : ""; }
         }, wa);
         String r = req("GET / HTTP/1.1\r\nHost: x\r\n\r\n", 0);
         assert r.startsWith("HTTP/1.1 200") && r.contains("name=pin") && !r.contains("Versione");
@@ -112,6 +115,7 @@ public class WebTest {
         String ck = "foo=1; sid=" + sid;
         r = req("GET / HTTP/1.1\r\nCookie: " + ck + "\r\n\r\n", 10);
         assert r.contains("&lt;1.2&gt;") && !r.contains("<1.2>");   // status escaped
+        assert r.contains("<tr><th>Parcheggio</th><td>45.46421,9.19003,1793632200000</td></tr>"); // exact row the iPhone parses
         String csrf = find(r, "name=csrf value=\"([0-9a-f]{32})\"");
         assert csrf != null;
 
@@ -119,11 +123,46 @@ public class WebTest {
         assert post("/a", ck, "csrf=" + csrf + "x&a=home&v=restart", 20).startsWith("HTTP/1.1 403");
         assert post("/a", ck, "csrf=" + csrf + "&a=sh&v=reboot", 20).startsWith("HTTP/1.1 400");   // not whitelisted
         assert post("/a", ck, "csrf=" + csrf + "&a=mic&v=5", 20).startsWith("HTTP/1.1 400");
+        assert post("/a", ck, "csrf=" + csrf + "&a=cptrack&v=maybe", 20).startsWith("HTTP/1.1 400");
         assert acts.isEmpty();
         assert post("/a", ck, "csrf=" + csrf + "&a=mic&v=2", 30).startsWith("HTTP/1.1 303");
         assert post("/a", ck, "csrf=" + csrf + "&a=reverse&v=2&a=x", 30).startsWith("HTTP/1.1 400"); // duplicate key: last wins -> rejected
         assert post("/a", ck, "csrf=" + csrf + "&a=reverse&v=2", 30).startsWith("HTTP/1.1 303");
         assert acts.toString().equals("[mic=2, reverse=2]") : acts;
+        // dynamic buttons (same HTML as the fixed ones) and text forms (class=t, exact structure for the iPhone parser)
+        assert r.contains("<h2>Città meteo</h2><form method=post action=/a><input type=hidden name=csrf value=\"" + csrf
+                + "\"><input type=hidden name=a value=city><button name=v value=\"gps\">GPS</button><button name=v value=\"Milano|45.5|9.2\">Milano</button></form>");
+        assert r.contains("<button name=v value=\"iPhone &lt;Anna&gt;\">iPhone &lt;Anna&gt;</button>") && !r.contains("<Anna>");
+        assert r.contains("<h2>Nome nel saluto</h2><form method=post action=/a class=t><input type=hidden name=csrf value=\"" + csrf
+                + "\"><input type=hidden name=a value=name><input name=v maxlength=20 value=\"Anna &quot;&lt;b&gt;&quot;\"><button>Salva</button></form>");
+        assert r.contains("<h2>Cerca città</h2><form method=post action=/a class=t>") && r.contains("name=a value=cityset><input name=v maxlength=64 value=\"\">");
+        assert r.contains("<h2>Cielo animato</h2><form method=post action=/a>");
+        assert r.contains("<h2>Scrivi in auto</h2><form method=post action=/a class=t><input type=hidden name=csrf value=\"" + csrf
+                + "\"><input type=hidden name=a value=type><input name=v maxlength=200 value=\"\"><button>Salva</button></form>");
+        acts.clear();
+        String[] bad = {"a=city&v=Roma|41.9|12.5", "a=hotspot&v=Altro", "a=name&v=123456789012345678901", "a=name&v=%3Cb%3E",
+                "a=name&v=a%0Ab", "a=cityset&v=Roma", "a=cityset&v=|41|12", "a=cityset&v=Ro;ma|41|12", "a=cityset&v=Roma|91|12",
+                "a=cityset&v=Roma|41|181", "a=cityset&v=Roma|NaN|12", "a=cityset&v=Roma|1e1|12", "a=cityset&v=Roma|41|12|1", "a=sky&v=maybe"};
+        for (String b : bad) assert post("/a", ck, "csrf=" + csrf + "&" + b, 31).startsWith("HTTP/1.1 400") : b;
+        assert acts.isEmpty();
+        String[] good = {"a=city&v=gps", "a=city&v=Milano|45.5|9.2", "a=hotspot&v=iPhone+%3CAnna%3E", "a=hotspot&v=off", "a=name&v=",
+                "a=name&v=Anna-Maria+D'Ascoli", "a=name&v=Jos%C3%A9+2", "a=cityset&v=Sant'Elpidio+a+Mare|43.2306|-13.6869", "a=sky&v=off", "a=hours&v=on"};
+        for (String g : good) assert post("/a", ck, "csrf=" + csrf + "&" + g, 32).startsWith("HTTP/1.1 303") : g;
+        assert acts.size() == good.length && acts.get(2).equals("hotspot=iPhone <Anna>") && acts.get(6).equals("name=José 2") : acts;
+        assert post("/a", ck, "csrf=" + csrf + "&a=cityset&v=Polo|-90|180", 33).startsWith("HTTP/1.1 303");
+        assert post("/a", ck, "csrf=" + csrf + "&a=cityset&v=12345678901234567890123456789012345678901|1|1", 33).startsWith("HTTP/1.1 400");
+        // "Scrivi in auto": 1-200 chars, no control chars; the flash never echoes the text
+        String max = new String(new char[200]).replace('\0', 'x');
+        String cjk = new String(new char[200]).replace("\0", "%E4%BD%A0");   // 200 x 3-byte char fits MAX_BODY
+        String[] badType = {"a=type&v=", "a=type&v=" + max + "y", "a=type&v=ciao%0A", "a=type&v=a%09b", "a=type&v=%00", "a=type&v=x%7F", "a=type&v=%1F"};
+        acts.clear();
+        for (String b : badType) assert post("/a", ck, "csrf=" + csrf + "&" + b, 34).startsWith("HTTP/1.1 400") : b;
+        assert acts.isEmpty();
+        for (String g : new String[]{"a=type&v=ciao", "a=type&v=via+Roma+1%2C+Milano", "a=type&v=" + max, "a=type&v=" + cjk, "a=type&v=%3Cb%3E+%F0%9F%9A%97"})
+            assert post("/a", ck, "csrf=" + csrf + "&" + g, 34).startsWith("HTTP/1.1 303") : g;
+        assert acts.size() == 5 && acts.get(1).equals("type=via Roma 1, Milano") && acts.get(4).equals("type=<b> \uD83D\uDE97") : acts;
+        r = req("GET / HTTP/1.1\r\nCookie: " + ck + "\r\n\r\n", 35);
+        assert r.contains("<p class=f>Inviato</p>") && !r.contains("<b> ") : "flash";
         assert post("/a", ck, "csrf=" + csrf + "&a=adb&v=on", 40 + WebAuth.IDLE_MS + 31).startsWith("HTTP/1.1 403"); // idle expiry
 
         // QR link through the handler: sets the cookie once, then clean redirect; reuse fails

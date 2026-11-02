@@ -5,6 +5,9 @@ import android.content.Context;
 import android.os.Process;
 import android.provider.Settings;
 import android.util.Log;
+import android.media.AudioManager;
+import android.content.Intent;
+import android.view.KeyEvent;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -13,10 +16,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/** Property access and the system-uid-only features (platform-signed variant). Hidden APIs via reflection. */
+/** Property access and the features that need a system app (they fail safely in the user app). Hidden APIs via reflection. */
 final class Sys {
     static final String TAG = HelperService.TAG;
-    static final String LAUNCHER = "com.android.launcher3";
+    static final String HOME = "it.cyberzec.home"; // force-stopped, the system reopens it as the Home
     static final String MIC_DEFAULT = "persist.suding.mic.gainlevel.default", MIC_NOW = "sys.suding.speedplay.audio.apm.agc.gain";
     static final String ADB_PORT = "service.adb.tcp.port"; // same mechanism as BWEngineerMode DialogUtils "enable lan adb"
 
@@ -59,6 +62,46 @@ final class Sys {
     }
 
     /** Persistent default (used by SpeedPlay at start if its own pref is absent) + the live value. */
+    /** Music share while a backcar stream plays (BW audio policy, in memory: back to the XML value at boot).
+     *  Hidden AudioSystem.setAudPolicyStrategy(stream, stream, percent); stream 12 = BACKCAR, 3 = MUSIC. */
+    static boolean setBackcarMusic(int percent) {
+        try {
+            Object r = Class.forName("android.media.AudioSystem").getMethod("setAudPolicyStrategy", int.class, int.class, int.class)
+                    .invoke(null, 12, 3, percent);
+            Log.e(TAG, "backcar music policy " + percent + "% -> " + r);
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "setAudPolicyStrategy failed: " + t);
+            return false;
+        }
+    }
+
+    /** Remote control from the web panel (values whitelisted in WebPanel.actions). */
+    static boolean key(Context c, String k) {
+        AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+        switch (k) {
+            case "home":
+                c.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return true;
+            case "back": // injecting needs INJECT_EVENTS (uid system) and must not run on the main thread
+                new Thread(new Runnable() { public void run() {
+                    try { new android.app.Instrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); }
+                    catch (Throwable t) { Log.e(TAG, "back key failed: " + t); }
+                } }, "key-back").start();
+                return true;
+            case "prev": case "play": case "next":
+                int code = "prev".equals(k) ? KeyEvent.KEYCODE_MEDIA_PREVIOUS : "next".equals(k) ? KeyEvent.KEYCODE_MEDIA_NEXT : KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
+                am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));
+                am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, code));
+                return true;
+            case "volup": case "voldown":
+                am.adjustStreamVolume(AudioManager.STREAM_MUSIC, "volup".equals(k) ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI);
+                return true;
+            default:
+                return false;
+        }
+    }
+
     static boolean setMic(int level) {
         if (level < 1 || level > 3) return false;
         String v = Integer.toString(level);

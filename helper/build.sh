@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build DFSK-Helper without Gradle. Requires: build-tools 35.0.0, platforms;android-28, JDK.
-#   ./build.sh            -> DFSK-Helper.apk         (user app, own debug key, v1.1, versionCode 2)
+#   ./build.sh            -> DFSK-Helper.apk         (user app, own debug key, v2.3, versionCode 14)
 set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home}
@@ -12,8 +12,8 @@ rm -rf $OUT && mkdir -p $OUT/classes $OUT/testclasses $OUT/res
 
 # 1. JVM self-checks of the pure-Java logic
 "$JAVA_HOME/bin/javac" --release 8 -nowarn -Xlint:-options -d $OUT/testclasses \
-    src/it/dfsk/helper/{CallState,ReverseState,WebAuth,WebPanel,QrEncoder,Lang}.java test/*.java
-for t in CallStateTest ReverseStateTest WebTest; do "$JAVA_HOME/bin/java" -ea -cp $OUT/testclasses $t; done
+    src/it/dfsk/helper/{CallState,ReverseState,RetroVolume,WebAuth,WebPanel,QrEncoder,Lang}.java test/*.java
+for t in CallStateTest ReverseStateTest RetroVolumeTest WebTest; do "$JAVA_HOME/bin/java" -ea -cp $OUT/testclasses $t; done
 
 # 2. resources
 MANIFEST=AndroidManifest.xml

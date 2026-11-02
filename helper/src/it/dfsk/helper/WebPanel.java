@@ -19,8 +19,12 @@ public final class WebPanel {
     public interface Backend {
         /** Status lines, label -> value (shown escaped). */
         Map<String, String> status();
-        /** Already whitelisted action/value (see actions()). @return true on success. */
+        /** Already whitelisted action/value (see allowed()). @return true on success. */
         boolean act(String action, String value);
+        /** Button rows computed now: {action, title, value, label, value, label...}; their values are allowed only while listed. */
+        String[][] dynamic();
+        /** Current value shown in a text form (see TEXTS). */
+        String current(String action);
     }
 
     /** Whitelist: action -> {value, label, value, label...}. Nothing else is accepted. */
@@ -29,17 +33,29 @@ public final class WebPanel {
         {"mic", "1", "1", "2", "2", "3", "3"},
         {"reverse", "0", Lang.t("Pausa", "Pause"), "1", Lang.t("Attenuata", "Ducked"), "2", Lang.t("Più bassa", "Lower")},
         {"callvol", "on", Lang.t("Attivo", "On"), "off", Lang.t("Spento", "Off")},
+        {"retrovol", "0", "Auto", "100", "100%", "75", "75%", "50", "50%", "25", "25%"},
         {"home", "restart", Lang.t("Riavvia Home", "Restart Home")},
         {"adb", "on", Lang.t("Attivo", "On"), "off", Lang.t("Spento", "Off")},
         {"voice", "on", Lang.t("Attiva", "On"), "off", Lang.t("Spenta", "Off")},
+        {"cptrack", "on", Lang.t("Attivo", "On"), "off", Lang.t("Spento", "Off")},
+        {"sky", "on", Lang.t("Attivo", "On"), "off", Lang.t("Spento", "Off")},
+        {"hours", "on", Lang.t("Visibile", "Shown"), "off", Lang.t("Nascosto", "Hidden")},
+        {"key", "back", Lang.t("‹ Indietro", "‹ Back"), "home", "Home", "prev", "⏮", "play", "⏯", "next", "⏭", "voldown", "Vol −", "volup", "Vol +"},
         };
     }
     static String[] titles() {
         return new String[]{Lang.t("Microfono CarPlay", "CarPlay microphone"), Lang.t("Musica in retromarcia", "Music in reverse"),
-                Lang.t("Volume chiamata dal volante", "Call volume from steering wheel"), "Home", Lang.t("Accesso Mac (ADB Wi-Fi)", "Computer access (ADB Wi-Fi)"),
-                Lang.t("Voce di benvenuto", "Welcome voice")};
+                Lang.t("Volume chiamata dal volante", "Call volume from steering wheel"), Lang.t("Volume in retromarcia", "Volume in reverse"), "Home", Lang.t("Accesso Mac (ADB Wi-Fi)", "Computer access (ADB Wi-Fi)"),
+                Lang.t("Voce di benvenuto", "Welcome voice"), Lang.t("Brano CarPlay nella Home", "CarPlay track on Home"),
+                Lang.t("Cielo animato", "Animated sky"), Lang.t("Meteo a ore", "Hourly weather"), Lang.t("Telecomando", "Remote control")};
     }
-    static final int MAX_HEADER = 8192, MAX_BODY = 2048;
+    /** Text forms: action, title, maxlength. Values checked by validText(). */
+    static String[][] texts() {
+        return new String[][]{{"name", Lang.t("Nome nel saluto", "Name in the greeting"), "20"},
+                {"cityset", Lang.t("Cerca città", "Search city"), "64"},
+                {"type", Lang.t("Scrivi in auto", "Type in the car"), "200"}};
+    }
+    static final int MAX_HEADER = 8192, MAX_BODY = 4096;   // a 200-char "type" text is up to ~1800 bytes urlencoded
 
     private final Backend backend;
     private final WebAuth auth;
@@ -140,12 +156,34 @@ public final class WebPanel {
         return null;
     }
 
-    static boolean allowed(String action, String value) {
-        for (String[] a : actions()) {
+    private boolean allowed(String action, String value) {
+        return listed(actions(), 1, action, value) || listed(backend.dynamic(), 2, action, value) || validText(action, value);
+    }
+
+    private static boolean listed(String[][] rows, int first, String action, String value) {
+        for (String[] a : rows) {
             if (!a[0].equals(action)) continue;
-            for (int i = 1; i < a.length; i += 2) if (a[i].equals(value)) return true;
+            for (int i = first; i < a.length; i += 2) if (a[i].equals(value)) return true;
         }
         return false;
+    }
+
+    /** name: 0-20 letters, digits, space, ' or -. cityset: "Nome|lat|lon" (see validCity). type: 1-200 chars, no control chars. */
+    static boolean validText(String action, String v) {
+        if (v == null) return false;
+        if ("name".equals(action)) return v.matches("[\\p{L}\\p{N} '-]{0,20}");
+        if ("type".equals(action)) return v.matches("[^\\p{Cntrl}]{1,200}"); // Cntrl = U+0000-U+001F and U+007F
+        return "cityset".equals(action) && validCity(v);
+    }
+
+    /** Name 1-40 chars without | ; or control chars, lat -90..90 and lon -180..180 as plain decimals. */
+    static boolean validCity(String v) {
+        String[] f = v.split("\\|", -1);
+        if (f.length != 3 || f[0].trim().isEmpty() || f[0].length() > 40 || !f[0].matches("[^;\\p{Cntrl}]+")) return false;
+        String num = "-?\\d{1,3}(\\.\\d{1,10})?";
+        if (!f[1].matches(num) || !f[2].matches(num)) return false;
+        double lat = Double.parseDouble(f[1]), lon = Double.parseDouble(f[2]);
+        return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
     }
 
     /** Handles one request. Public for the JVM self-check. */
@@ -178,7 +216,9 @@ public final class WebPanel {
             if (!auth.checkCsrf(token, f.get("csrf"), now)) { send(out, "403 Forbidden", null, Lang.t("Sessione scaduta: ricarica la pagina.", "Session expired: reload the page.")); return; }
             String a = f.get("a"), v = f.get("v");
             if (!allowed(a, v)) { send(out, "400 Bad Request", null, Lang.t("Comando non valido", "Invalid command")); return; }
-            flash = backend.act(a, v) ? Lang.t("Fatto: ", "Done: ") + a + " = " + v : Lang.t("Non riuscito: ", "Failed: ") + a + " = " + v;
+            boolean ok = backend.act(a, v);
+            if ("type".equals(a)) flash = ok ? Lang.t("Inviato", "Sent") : Lang.t("Non inviato", "Not sent"); // never echo the typed text
+            else flash = ok ? Lang.t("Fatto: ", "Done: ") + a + " = " + v : Lang.t("Non riuscito: ", "Failed: ") + a + " = " + v;
             redirect(out, null);
         } else {
             send(out, "404 Not Found", null, Lang.t("Non trovato", "Not found"));
@@ -223,16 +263,23 @@ public final class WebPanel {
             sb.append("<tr><th>").append(esc(e.getKey())).append("</th><td>").append(esc(e.getValue())).append("</td></tr>");
         sb.append("</table>");
         String hidden = "<input type=hidden name=csrf value=\"" + esc(csrf) + "\">";
-        for (int i = 0; i < actions().length; i++) {
-            String[] a = actions()[i];
-            sb.append("<h2>").append(esc(titles()[i])).append("</h2><form method=post action=/a>").append(hidden)
-              .append("<input type=hidden name=a value=").append(a[0]).append(">");
-            for (int k = 1; k < a.length; k += 2)
-                sb.append("<button name=v value=\"").append(esc(a[k])).append("\">").append(esc(a[k + 1])).append("</button>");
-            sb.append("</form>");
-        }
+        for (int i = 0; i < actions().length; i++) buttons(sb, hidden, titles()[i], actions()[i], 1);
+        for (String[] a : backend.dynamic()) buttons(sb, hidden, a[1], a, 2);
+        for (String[] t : texts()) // class=t: the iPhone app reads these as text commands, not button forms
+            sb.append("<h2>").append(esc(t[1])).append("</h2><form method=post action=/a class=t>").append(hidden)
+              .append("<input type=hidden name=a value=").append(t[0]).append("><input name=v maxlength=").append(t[2])
+              .append(" value=\"").append(esc(backend.current(t[0]))).append("\"><button>" + Lang.t("Salva", "Save") + "</button></form>");
         sb.append("<form method=post action=/logout>").append(hidden).append("<button class=o>" + Lang.t("Esci", "Log out") + "</button></form>");
         return page(sb.toString());
+    }
+
+    /** Button form; the iPhone app parses exactly this structure. */
+    private static void buttons(StringBuilder sb, String hidden, String title, String[] a, int first) {
+        sb.append("<h2>").append(esc(title)).append("</h2><form method=post action=/a>").append(hidden)
+          .append("<input type=hidden name=a value=").append(a[0]).append(">");
+        for (int k = first; k < a.length; k += 2)
+            sb.append("<button name=v value=\"").append(esc(a[k])).append("\">").append(esc(a[k + 1])).append("</button>");
+        sb.append("</form>");
     }
 
     private static String page(String body) {
@@ -243,7 +290,7 @@ public final class WebPanel {
                 + "th,td{text-align:left;padding:8px;border-bottom:1px solid #eee;vertical-align:top}th{font-weight:600;width:45%}"
                 + "button{font-size:17px;padding:12px 16px;margin:4px 6px 4px 0;border:0;border-radius:10px;background:#0a60ff;color:#fff}"
                 + "button.o{background:#777}input{font-size:22px;padding:10px;width:9em;margin:8px 0;letter-spacing:4px}"
-                + ".f{background:#fff3c4;padding:10px;border-radius:8px}"
+                + ".t input{letter-spacing:0;width:12em}.f{background:#fff3c4;padding:10px;border-radius:8px}"
                 + "@media(prefers-color-scheme:dark){body{background:#111;color:#eee}table{background:#1d1d1f}th,td{border-color:#333}.f{background:#4a3f12}}"
                 + "</style></head><body><h1>CyberZec Set</h1>" + body + "</body></html>";
     }

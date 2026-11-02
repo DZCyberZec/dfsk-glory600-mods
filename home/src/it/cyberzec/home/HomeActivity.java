@@ -4,8 +4,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,17 +12,26 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Outline;
 import android.graphics.PorterDuff;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
+import android.media.MediaMetadata;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -33,9 +40,13 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
+import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ArrayAdapter;
@@ -49,6 +60,7 @@ import java.text.Collator;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -98,18 +110,25 @@ public class HomeActivity extends Activity {
     private long lastGpsAt, lastWeatherTry;
     private String lastClimaLog = "";
     private Pager pager;
+    static HomeActivity live;   // the open Home, for SettingsReceiver (main thread only)
+    private boolean resumed;
+    private int shownPhase = -1;   // sky phase the night dimming was last applied for
 
-    private TextView chipCarplay, chipNet, chipMeteo, chipGps, chipOutside;
+    private TextView chipNet, chipGps, chipOutside;
     private ImageView chipNetIcon;
-    private TextView cpName, cpStatus;
-    private TextView climaState, climaLevel, climaUnit, fanText;
-    private LinearLayout climaPower;
-    private ImageView climaPowerIcon, mIcon;
-    private final View[] fanSeg = new View[8];
-    private final LinearLayout[] modeCell = new LinearLayout[4];
-    private TextView tAc, tRecirc, tDefrost, tRear;
-    private TextView mCity, mTemp, mText, mMinMax;
-    private final TextView[] mHour = new TextView[6], mHourT = new TextView[6];
+    private SkyView sky;
+    private double[] sun;   // today's sunrise/sunset in minutes, null without a position (updateStatus)
+    private LinearLayout hoursRow;
+    private View climaDot;
+    private ImageView thumb;
+    private String coverFor;   // title whose cover is shown or being looked up
+    private boolean coverShown;
+    private TextView greet, greetName, alert, wCity, wTemp, wText, climaSub;
+    private ImageView wIcon, wPin, mPlay;
+    private TextView mChannel, mSub, mTitle, mPos, mDur;
+    private LinearLayout mBar, mControls, mProgress;
+    private boolean mediaDenied, demoPlaying = true;
+    private long demoPos = 418_000;
 
     // ---------------------------------------------------------------- lifecycle
 
@@ -121,7 +140,7 @@ public class HomeActivity extends Activity {
         home = getSharedPreferences("home", MODE_PRIVATE);   // owner's dock and hidden apps
         lm = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackground(background());
         pager = new Pager(this);
         root.addView(pager, new FrameLayout.LayoutParams(-1, -1));
@@ -144,17 +163,21 @@ public class HomeActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
         showWeather(weather.cached());
+        live = this;
     }
 
     @Override protected void onResume() {
         super.onResume();
+        resumed = true;
         startLocation();
         h.post(tick);
     }
 
     @Override protected void onPause() {
         super.onPause();
+        resumed = false;
         h.removeCallbacks(tick);
+        sky.setRunning(false);
         try {
             lm.removeUpdates(location);
         } catch (Exception ignored) {
@@ -162,6 +185,7 @@ public class HomeActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        if (live == this) live = null;
         unregisterReceiver(packages);
         hvac.disconnect();
         h.removeCallbacksAndMessages(null);
@@ -170,10 +194,12 @@ public class HomeActivity extends Activity {
 
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
+        closeSheet();
         pager.goTo(0);   // Home key: back to the cockpit
     }
 
     @Override public void onBackPressed() {
+        closeSheet();
         pager.goTo(0);   // a launcher never closes itself
     }
 
@@ -185,6 +211,7 @@ public class HomeActivity extends Activity {
         @Override public void run() {
             updateStatus();
             updateClima.run();
+            updateMedia();
             h.postDelayed(this, 2000);
         }
     };
@@ -195,14 +222,9 @@ public class HomeActivity extends Activity {
         }
     };
 
-    // ---------------------------------------------------------------- status bar chips, location, weather
+    // ---------------------------------------------------------------- status line, location, weather
 
     private void updateStatus() {
-        boolean carplay = Settings.Secure.getInt(getContentResolver(), "bw.carplay.connect.state", 0) != 0;
-        show(chipCarplay, carplay);
-        cpStatus.setText(carplay ? Logic.t("Connesso", "Connected") : Logic.t("Non collegato", "Not connected"));
-        cpStatus.setTextColor(carplay ? LIME : MUT);
-
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo ni = cm.getActiveNetworkInfo();
         boolean online = ni != null && ni.isConnected();
@@ -212,21 +234,41 @@ public class HomeActivity extends Activity {
         chipNetIcon.setImageResource(online ? R.drawable.st_wifi : R.drawable.st_offline);
         chipNetIcon.setColorFilter(online ? LIME : MUT, PorterDuff.Mode.SRC_IN);
 
-        long at = weather.fetchedAt();
-        show(chipMeteo, at > 0);
-        if (at > 0) chipMeteo.setText(new SimpleDateFormat("HH:mm", Locale.ITALY).format(new Date(at)));
-
         boolean gps = lastGpsAt > 0 && SystemClock.elapsedRealtime() - lastGpsAt < GPS_FRESH_MS;
         show(chipGps, gps);
 
         float out = hvac.getFloat(Hvac.OUTSIDE_TEMP, 0);
         show(chipOutside, !Float.isNaN(out));
-        if (!Float.isNaN(out)) chipOutside.setText(Logic.t("Est. ", "Out ") + Math.round(out) + "°");
+        if (!Float.isNaN(out)) chipOutside.setText(Logic.t("Fuori ", "Outside ") + Math.round(out) + "°");
 
-        boolean due = weather.stale() || !prefs.contains("city");
-        if (online && due && prefs.contains("lat") && SystemClock.elapsedRealtime() - lastWeatherTry > 60_000) {
+        Calendar cal = Calendar.getInstance();
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+        Weather.Data d = weather.cached();
+        String place = prefs.getString("fix_city", null);   // city chosen by the owner, else the GPS position
+        String lat = prefs.getString(place != null ? "fix_lat" : "lat", null), lon = prefs.getString(place != null ? "fix_lon" : "lon", "0");
+        sun = lat == null ? null : Logic.sunTimes(cal.get(Calendar.DAY_OF_YEAR), Double.parseDouble(lat),
+                Double.parseDouble(lon), cal.getTimeZone().getOffset(cal.getTimeInMillis()) / 3_600_000.0);
+        int phase = Logic.sunPhase(hour * 60 + cal.get(Calendar.MINUTE), sun);
+        sky.set(phase, d == null ? 1 : Logic.skyKind(Logic.meteoIcon(d.code)));
+        if (phase != shownPhase) {   // night: everything about 18% darker (lime C5F56C -> A2C959), same layout
+            shownPhase = phase;
+            root.setForeground(phase == 3 ? new ColorDrawable(0x2E000000) : null);
+        }
+        sky.setRunning(resumed && home.getBoolean("sky", true));   // also while driving (owner's choice, 02/11); off = still sky
+        String name = home.getString("name", "");
+        greet.setText(Logic.greeting(hour));
+        greetName.setText(name);
+        greetName.setVisibility(name.isEmpty() ? View.GONE : View.VISIBLE);
+        if (d == null) showWeather(null);   // "waiting for GPS" -> "waiting for Internet" once a fix arrives
+        String rain = d == null ? null : Logic.rainText(d.rainAt, System.currentTimeMillis());
+        if (rain == null && EMULATOR) rain = Logic.t("Pioggia tra 20 min", "Rain in 20 min");   // emulator: show the alert line
+        show(alert, rain != null);
+        if (rain != null) alert.setText(rain);
+
+        boolean due = weather.stale();   // not "|| no city": a failing reverse lookup refetched every minute
+        if (online && due && lat != null && SystemClock.elapsedRealtime() - lastWeatherTry > 60_000) {
             lastWeatherTry = SystemClock.elapsedRealtime();   // at most one try a minute when a request fails
-            weather.refresh(Double.parseDouble(prefs.getString("lat", "0")), Double.parseDouble(prefs.getString("lon", "0")),
+            weather.refresh(Double.parseDouble(lat), Double.parseDouble(lon), place,
                     new Runnable() {
                         @Override public void run() {
                             runOnUiThread(new Runnable() {
@@ -259,375 +301,835 @@ public class HomeActivity extends Activity {
             prefs.edit().putString("lat", String.valueOf(l.getLatitude()))
                     .putString("lon", String.valueOf(l.getLongitude())).apply();
             if (LocationManager.GPS_PROVIDER.equals(l.getProvider())
-                    && System.currentTimeMillis() - l.getTime() < GPS_FRESH_MS)
+                    && System.currentTimeMillis() - l.getTime() < GPS_FRESH_MS) {
                 lastGpsAt = SystemClock.elapsedRealtime();
+                prefs.edit().putString("park_lat", String.valueOf(l.getLatitude()))   // last fix before switch-off = parked car
+                        .putString("park_lon", String.valueOf(l.getLongitude())).putLong("park_at", l.getTime()).apply();
+            }
         }
         @Override public void onStatusChanged(String p, int s, Bundle e) {}
         @Override public void onProviderEnabled(String p) {}
         @Override public void onProviderDisabled(String p) {}
     };
 
+
     private void showWeather(Weather.Data d) {
+        boolean fixed = prefs.contains("fix_city");
+        wPin.setColorFilter(fixed ? MUT : LIME, PorterDuff.Mode.SRC_IN);   // lime pin = city from GPS
         if (d == null) {
-            mCity.setText(prefs.contains("lat") ? Logic.t("Posizione trovata", "Location found") : Logic.t("In attesa del GPS", "Waiting for GPS"));
-            mTemp.setText("--°");
-            mText.setText(prefs.contains("lat") ? Logic.t("In attesa di Internet", "Waiting for Internet") : Logic.t("Serve la posizione", "Location needed"));
-            mMinMax.setText("");
-            mIcon.setImageResource(R.drawable.w_nubi);
-            for (int i = 0; i < 6; i++) { mHour[i].setText(""); mHourT[i].setText(""); }
+            wCity.setText(prefs.contains("lat") ? Logic.t("Senza Internet", "No Internet") : Logic.t("In attesa del GPS", "Waiting for GPS"));
+            wTemp.setText("--°");
+            wText.setText("");
+            wIcon.setImageResource(R.drawable.w_nubi);
+            wIcon.setColorFilter(Logic.meteoColor("nubi"), PorterDuff.Mode.SRC_IN);
+            hoursRow.setVisibility(View.INVISIBLE);
             return;
         }
-        mCity.setText(d.city != null ? d.city : Logic.t("Posizione GPS", "GPS location"));
-        mTemp.setText(d.temp + "°");
-        mText.setText(d.text);
-        mMinMax.setText(d.max + "° / " + d.min + "°");
-        mIcon.setImageResource(getResources().getIdentifier("w_" + Logic.meteoIcon(d.code), "drawable", getPackageName()));
-        for (int i = 0; i < 5; i++) {
-            mHour[i].setText(d.hours[i] == null ? "" : d.hours[i]);
-            mHourT[i].setText(d.hours[i] == null ? "" : d.hourTemps[i] + "°");
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int minute = hour * 60 + Calendar.getInstance().get(Calendar.MINUTE);
+        String icon = Logic.meteoIconAt(d.code, minute, sun);
+        hoursRow.setVisibility(home.getBoolean("hours", true) ? View.VISIBLE : View.INVISIBLE);
+        for (int i = 0; i < 6; i++) {
+            LinearLayout cell = (LinearLayout) hoursRow.getChildAt(i);
+            String hh = i == 0 ? null : d.hours[i - 1];
+            int code = i == 0 ? d.code : d.hourCodes[i - 1];
+            String ic = code < 0 ? "nubi" : Logic.meteoIconAt(code, hh == null ? minute : Integer.parseInt(hh) * 60 + 30, sun);
+            boolean wet = Logic.skyKind(ic) == 2;
+            ((TextView) cell.getChildAt(0)).setText(i == 0 ? Logic.t("Ora", "Now") : hh == null ? "" : hh);
+            ((TextView) cell.getChildAt(0)).setTextColor(i == 0 ? LIME : wet ? 0xFFBFE0FF : 0xFFD5DCEA);
+            ImageView iv = (ImageView) cell.getChildAt(1);
+            iv.setVisibility(code < 0 ? View.INVISIBLE : View.VISIBLE);
+            iv.setImageResource(getResources().getIdentifier("w_" + ic, "drawable", getPackageName()));
+            iv.setColorFilter(Logic.meteoColor(ic), PorterDuff.Mode.SRC_IN);
+            ((TextView) cell.getChildAt(2)).setText((i == 0 ? d.temp : d.hourTemps[i - 1]) + "°");
+            cell.setBackground(i == 0 ? round(0x24C5F56C, 18, 0) : wet ? round(0x384FA3F0, 18, 0) : null);
         }
-        mHour[5].setText(Logic.t("Pioggia", "Rain"));
-        mHourT[5].setText(d.rainPct + "%");
+        wCity.setText(d.city != null ? d.city : Logic.t("Posizione GPS", "GPS location"));
+        wTemp.setText(d.temp + "°");
+        wText.setText(d.text);
+        wIcon.setImageResource(getResources().getIdentifier("w_" + icon, "drawable", getPackageName()));
+        wIcon.setColorFilter(Logic.meteoColor(icon), PorterDuff.Mode.SRC_IN);
     }
 
-    // ---------------------------------------------------------------- climate
+    /** Tap on the alert line: the next hours. */
+    private void weatherHours() {
+        Weather.Data d = weather.cached();
+        if (d == null) { meteoMenu(); return; }
+        List<String> rows = new ArrayList<>();
+        for (int i = 0; i < 5; i++) if (d.hours[i] != null) rows.add(d.hours[i] + ":00   " + d.hourTemps[i] + "°");
+        rows.add(Logic.t("Pioggia oggi: ", "Rain today: ") + d.rainPct + "%");
+        choose((d.city != null ? d.city : "Meteo") + " · " + d.text, rows.toArray(new String[0]), new Choice() {
+            @Override public void on(int which) {}
+        });
+    }
+
+    private void askName() {
+        final EditText e = new EditText(this);
+        style(e, 34, TXT, false);
+        e.setSingleLine();
+        e.setText(home.getString("name", ""));
+        e.setPadding(px(24), px(22), px(24), px(22));
+        FrameLayout box = new FrameLayout(this);
+        box.setPadding(px(30), px(10), px(30), 0);
+        box.addView(e);
+        TextView head = text(Logic.t("Il tuo nome nel saluto", "Your name in the greeting"), 34, LIME, true);
+        head.setPadding(px(30), px(26), px(30), px(10));
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+                .setCustomTitle(head).setView(box)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface di, int w) {
+                        home.edit().putString("name", e.getText().toString().trim()).apply();
+                        updateStatus();
+                    }
+                })
+                .setNegativeButton(Logic.t("Annulla", "Cancel"), null)
+                .show();
+    }
+
+    // ---------------------------------------------------------------- climate button (full climate screen: roadmap)
 
     private final Runnable updateClima = new Runnable() {
         @Override public void run() {
             boolean ready = hvac.ready();
             boolean on = ready && hvac.getBool(Hvac.POWER_ON, Hvac.AREA_ROW);
-            int fan = on ? Math.max(0, hvac.getInt(Hvac.FAN_SPEED, Hvac.AREA_ROW)) : 0;
-            boolean front = ready && hvac.getBool(Hvac.DEFROST, Hvac.AREA_FRONT_WINDOW);
-            int mode = on ? hvac.getInt(Hvac.MODE, Hvac.AREA_ROW) : -1;
-
-            climaState.setText(!ready ? Logic.t("Non disponibile", "Not available") : on ? Logic.t("Acceso", "On") : Logic.t("Spento", "Off"));
-            climaState.setTextColor(on ? LIME : MUT);
-            // same look as the other switches: lime = on
-            climaPowerIcon.setColorFilter(on ? DARK : TXT, PorterDuff.Mode.SRC_IN);
-            climaPower.setBackground(on ? round(LIME, 999, LIME) : round(0x0DFFFFFF, 999, LINE));
-
-            setFan(fan);
-            fanText.setText(on ? Logic.t("Ventola  ", "Fan  ") + fan + "/8" : Logic.t("Ventola", "Fan"));
             float t = ready ? hvac.getFloat(Hvac.TEMP, Hvac.AREA_TEMP) : Float.NaN;
             // this car is level-only (secure offline_hvac_type=0): never degrees
-            climaLevel.setText(Float.isNaN(t) ? "—" : Logic.climaLevelText(t));
-            for (int i = 0; i < 4; i++) modeSelected(i, i == mode);
-            toggle(tDefrost, front);
-            String snap = "acceso=" + on + " ventola=" + fan + " modo=" + (ready ? hvac.getInt(Hvac.MODE, Hvac.AREA_ROW) : -1)
-                    + " parabrezza=" + front + " livello=" + climaLevel.getText()
-                    + " ac=" + (ready && hvac.getBool(Hvac.AC_ON, Hvac.AREA_ROW))
-                    + " ricircolo=" + (ready && hvac.getBool(Hvac.RECIRC_ON, Hvac.AREA_RECIRC))
-                    + " lunotto=" + (ready && hvac.getBool(Hvac.DEFROST, Hvac.AREA_REAR_WINDOW));
+            String level = Float.isNaN(t) ? "" : " · " + Logic.t("liv. ", "lvl ") + Logic.climaLevelText(t);
+            climaSub.setText(!ready ? Logic.t("non disponibile", "not available") : on ? Logic.t("acceso", "on") + level : Logic.t("spento", "off"));
+            climaSub.setTextColor(on ? LIME : MUT);
+            climaDot.setBackground(round(on ? LIME : 0x33FFFFFF, 999, 0));
+            String snap = "acceso=" + on + " livello=" + level;
             if (!snap.equals(lastClimaLog)) Log.e(Hvac.TAG, "stato " + (lastClimaLog = snap));   // Log.e: log.tag=M on the car hides lower levels
-            toggle(tAc, ready && hvac.getBool(Hvac.AC_ON, Hvac.AREA_ROW));
-            toggle(tRecirc, ready && hvac.getBool(Hvac.RECIRC_ON, Hvac.AREA_RECIRC));
-            toggle(tRear, ready && hvac.getBool(Hvac.DEFROST, Hvac.AREA_REAR_WINDOW));
         }
     };
 
-    /** Air direction 0..3, same command as the Clima app (does not touch the windscreen defrost). */
-    private void setMode(int m) {
-        Log.e(Hvac.TAG, "scelta modalita " + m);
-        if (!hvac.setMode(m)) { notAvailable(); return; }
-        if (hvac.getBool(Hvac.DEFROST, Hvac.AREA_FRONT_WINDOW))   // the unit keeps the air on the windscreen
-            Toast.makeText(this, Logic.t("Parabrezza acceso: l'aria resta sul vetro finché non lo spegni", "Windscreen defrost is on: air stays on the glass until you turn it off"), Toast.LENGTH_LONG).show();
-        h.postDelayed(updateClima, 900);
-        h.postDelayed(updateClima, 1800);
-    }
+    // ---------------------------------------------------------------- CarPlay media (session opened by DFSK Helper, see ANALISI_CARPLAY_BRANO.md)
 
-    private void notAvailable() {
-        Toast.makeText(this, Logic.t("Clima non disponibile", "Climate not available"), Toast.LENGTH_SHORT).show();
-    }
+    static final String SPEEDPLAY = "com.suding.speedplay";
+    static final boolean EMULATOR = "ranchu".equals(Build.HARDWARE) || "goldfish".equals(Build.HARDWARE);
 
-    private void press(int key) {
-        if (!hvac.press(key)) {
-            notAvailable();
-            return;
+    /** What the media card shows: CarPlay while it is connected, otherwise whatever app is playing (NewPipe...),
+     *  else the last paused one with a title. Null if nothing (or no MEDIA_CONTENT_CONTROL outside the car). */
+    private MediaController media() {
+        try {
+            boolean carplay = Settings.Secure.getInt(getContentResolver(), "bw.carplay.connect.state", 0) != 0;
+            MediaSessionManager m = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
+            MediaController paused = null;
+            for (MediaController c : m.getActiveSessions(null)) {
+                boolean sp = SPEEDPLAY.equals(c.getPackageName());
+                if (sp && carplay) return c;
+                if (sp || c.getMetadata() == null) continue;
+                String t = c.getMetadata().getString(MediaMetadata.METADATA_KEY_TITLE);
+                if (t == null || t.isEmpty()) continue;
+                PlaybackState ps = c.getPlaybackState();
+                if (ps != null && ps.getState() == PlaybackState.STATE_PLAYING) return c;
+                if (paused == null) paused = c;
+            }
+            return carplay ? null : paused;
+        } catch (SecurityException e) {
+            if (!mediaDenied) Log.w(TAG, "sessioni media non leggibili: " + e);
+            mediaDenied = true;
         }
-        h.postDelayed(updateClima, 700);
-        h.postDelayed(updateClima, 1500);
+        return null;
     }
 
-    private View.OnClickListener key(final int key) {
+    private void updateMedia() {
+        boolean carplay = Settings.Secure.getInt(getContentResolver(), "bw.carplay.connect.state", 0) != 0;
+        MediaController c = media();
+        boolean cp = c == null || SPEEDPLAY.equals(c.getPackageName());
+        String source = cp ? "CarPlay" : appLabel(c.getPackageName());
+        MediaMetadata md = c == null ? null : c.getMetadata();
+        PlaybackState ps = c == null ? null : c.getPlaybackState();
+        String title = md == null ? null : md.getString(MediaMetadata.METADATA_KEY_TITLE);
+        boolean demo = EMULATOR && (title == null || title.isEmpty());   // emulator: show a sample so the layout can be checked
+        if (demo) {
+            title = "Come ho trasformato la mia DFSK Glory 600 – guida completa CarPlay e clima";
+            if (demoPlaying) demoPos += 2000;
+        }
+        boolean has = title != null && !title.isEmpty(), timed = false;
+        if (has) {
+            boolean playing = demo ? demoPlaying : ps != null && ps.getState() == PlaybackState.STATE_PLAYING;
+            long dur = demo ? 1_104_000 : md.getLong(MediaMetadata.METADATA_KEY_DURATION);
+            long pos = demo ? demoPos % dur : ps == null ? 0 : ps.getPosition()
+                    + (playing && ps.getLastPositionUpdateTime() > 0 ? (long) ((SystemClock.elapsedRealtime() - ps.getLastPositionUpdateTime()) * ps.getPlaybackSpeed()) : 0);
+            String artist = demo ? "CyberZec" : md.getString(MediaMetadata.METADATA_KEY_ARTIST);
+            mTitle.setText(title);
+            mChannel.setText(artist != null && !artist.isEmpty() ? artist : source);
+            mSub.setText(source + " · " + (playing ? Logic.t("in riproduzione", "playing") : Logic.t("in pausa", "paused")));
+            mPlay.setImageResource(playing ? R.drawable.m_pause : R.drawable.m_play);
+            timed = dur > 0;
+            if (timed) {
+                mPos.setText(Logic.clock(Math.min(pos, dur)));
+                mDur.setText(Logic.clock(dur));
+                float f = Math.max(0f, Math.min(1f, pos / (float) dur));
+                ((LinearLayout.LayoutParams) mBar.getChildAt(0).getLayoutParams()).weight = f;
+                ((LinearLayout.LayoutParams) mBar.getChildAt(1).getLayoutParams()).weight = 1 - f;
+                mBar.requestLayout();
+            }
+            String album = demo ? null : md.getString(MediaMetadata.METADATA_KEY_ALBUM);
+            Bitmap art = demo ? null : md.getBitmap(MediaMetadata.METADATA_KEY_ART);   // apps like NewPipe send the thumbnail
+            if (art == null && !demo) art = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
+            if (art == null && !demo) art = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
+            if (art != null) {
+                coverFor = title;
+                coverShown = true;
+                thumb.setPadding(0, 0, 0, 0);
+                thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                thumb.setImageBitmap(art);
+            } else if (!title.equals(coverFor)) {
+                coverFor = title;
+                coverShown = false;
+                Cover.find(title, artist, album,
+                        getSharedPreferences("cover", MODE_PRIVATE).getString("yt_key", null), new Cover.Done() {
+                    @Override public void cover(final String t, final Bitmap b) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (b == null || !t.equals(coverFor)) return;
+                                coverShown = true;
+                                thumb.setPadding(0, 0, 0, 0);
+                                thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                                thumb.setImageBitmap(b);
+                            }
+                        });
+                    }
+                });
+            }
+            if (!coverShown) {   // until (or if no) cover arrives: music note when there is an album, else a video
+                thumb.setPadding(px(80), px(28), px(80), px(28));
+                thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                if (!cp) thumb.setImageDrawable(appIcon(c.getPackageName()));   // e.g. the NewPipe icon
+                else thumb.setImageResource(album != null && !album.isEmpty() ? R.drawable.src_music : R.drawable.src_video);
+            }
+            thumb.setBackground(round(0xFF182329, 22, 0xFF2E3A3D, 2));
+        } else {
+            coverFor = null;
+            coverShown = false;
+            thumb.setImageDrawable(null);
+            mTitle.setText(carplay ? Logic.t("Niente in riproduzione", "Nothing playing") : Logic.t("CarPlay non collegato", "CarPlay not connected"));
+            mChannel.setText(carplay ? Logic.t("Avvia un video o la musica su CarPlay", "Start a video or music in CarPlay")
+                    : Logic.t("Collega l'iPhone a CarPlay", "Connect the iPhone to CarPlay"));
+            mSub.setText("CarPlay");
+            thumb.setBackground(round(0x14FFFFFF, 22, LINE));
+        }
+        mControls.setVisibility(has ? View.VISIBLE : View.GONE);
+        mProgress.setVisibility(has && timed ? View.VISIBLE : View.INVISIBLE);
+    }
+
+
+    /** Tap on the media card: the app that is playing (CarPlay when nothing else). */
+    private void openPlaying() {
+        MediaController c = media();
+        if (c != null && !SPEEDPLAY.equals(c.getPackageName())) {
+            try {
+                if (c.getSessionActivity() != null) { c.getSessionActivity().send(); return; }
+                Intent i = getPackageManager().getLaunchIntentForPackage(c.getPackageName());
+                if (i != null) { startActivity(i); return; }
+            } catch (Exception e) {
+                Log.i(TAG, "apertura app media fallita: " + e);
+            }
+        }
+        launch(SPEEDPLAY, "com.suding.speedplay.ui.MainActivity");
+    }
+
+    private Drawable appIcon(String pkg) {
+        try {
+            return getPackageManager().getApplicationIcon(pkg);
+        } catch (Exception e) {
+            return getDrawable(R.drawable.src_video);
+        }
+    }
+
+    private String appLabel(String pkg) {
+        try {
+            return getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0)).toString();
+        } catch (Exception e) {
+            return pkg;
+        }
+    }
+
+    private View.OnClickListener mediaKey(final int code) {
         return new View.OnClickListener() {
             @Override public void onClick(View v) {
-                press(key);
+                MediaController c = media();
+                if (c != null) {
+                    c.dispatchMediaButtonEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));   // SpeedPlay passes media keys on to CarPlay
+                    c.dispatchMediaButtonEvent(new KeyEvent(KeyEvent.ACTION_UP, code));
+                } else if (EMULATOR) {
+                    if (code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) demoPlaying = !demoPlaying;
+                    else demoPos = code == KeyEvent.KEYCODE_MEDIA_NEXT ? 0 : Math.max(0, demoPos - 10_000);
+                } else launch(SPEEDPLAY, "com.suding.speedplay.ui.MainActivity");
+                h.postDelayed(new Runnable() {
+                    @Override public void run() {
+                        updateMedia();
+                    }
+                }, 400);
             }
         };
     }
 
-    private void setFan(int level) {
-        for (int i = 0; i < 8; i++)
-            fanSeg[i].setBackground(i < level ? round(new int[]{LIME, TEAL}, 5, 0) : round(0x14FFFFFF, 5, 0));
-    }
-
-    private void toggle(TextView t, boolean on) {
-        t.setTextColor(on ? DARK : TXT);
-        t.setBackground(on ? round(LIME, 14, LIME) : round(0x08FFFFFF, 14, LINE));
-    }
-
-    private void modeSelected(int i, boolean on) {
-        LinearLayout cell = modeCell[i];
-        cell.setBackground(on ? round(LIME, 14, LIME) : round(0x08FFFFFF, 14, LINE));
-        ((ImageView) cell.getChildAt(0)).setColorFilter(on ? DARK : TEAL, PorterDuff.Mode.SRC_IN);
-        ((TextView) cell.getChildAt(1)).setTextColor(on ? DARK : TXT);
-    }
-
-    // ---------------------------------------------------------------- page 1: cockpit
+    // ---------------------------------------------------------------- page 1: clock and weather, CarPlay media, bottom bar
 
     private View cockpit() {
-        LinearLayout page = new LinearLayout(this);
-        page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(px(30), px(18), px(30), px(22));
-
-        LinearLayout top = hbox();
-        top.setGravity(Gravity.CENTER_VERTICAL);
-        TextClock clock = new TextClock(this);
-        clock.setFormat24Hour("HH:mm");
-        clock.setFormat12Hour("HH:mm");
-        style(clock, 68, TXT, true);
-        top.addView(clock);
-        TextClock date = new TextClock(this);
-        date.setFormat24Hour("EEE d MMM");
-        date.setFormat12Hour("EEE d MMM");
-        style(date, 30, MUT, true);
-        top.addView(date, margins(-2, -2, 20, 8, 0, 0));
-        LinearLayout chips = hbox();
-        chips.setGravity(Gravity.CENTER);
-        chipCarplay = chip(chips, R.drawable.st_phone, LIME, "CarPlay");
-        chipNet = chip(chips, R.drawable.st_wifi, LIME, "Internet");
-        chipNetIcon = (ImageView) ((ViewGroup) chipNet.getParent()).getChildAt(0);
-        chipMeteo = chip(chips, R.drawable.st_weather, TEAL, Logic.t("Meteo", "Weather"));
-        chipGps = chip(chips, R.drawable.st_gps, LIME, "GPS");
-        chipOutside = chip(chips, R.drawable.st_temp, TEAL, "");
-        top.addView(chips, new LinearLayout.LayoutParams(0, -2, 1));
-        page.addView(top, new LinearLayout.LayoutParams(-1, px(78)));
+        LinearLayout page = vbox();
+        page.setPadding(px(16), px(16), px(18), px(16));
 
         LinearLayout body = hbox();
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-1, 0, 1);
-        blp.topMargin = px(14);
-        page.addView(body, blp);
-        body.addView(carplayCard(), new LinearLayout.LayoutParams(px(380), -1));
-
+        page.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
+        body.addView(skyCard(), new LinearLayout.LayoutParams(px(720), -1));
         LinearLayout right = vbox();
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, -1, 1);
-        rlp.leftMargin = px(18);
+        rlp.leftMargin = px(22);
         body.addView(right, rlp);
-        LinearLayout row = hbox();
-        right.addView(row, new LinearLayout.LayoutParams(-1, 0, 1));
-        row.addView(climaCard(), new LinearLayout.LayoutParams(0, -1, 1.5f));
-        LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(0, -1, 1);
-        mlp.leftMargin = px(18);
-        row.addView(meteoCard(), mlp);
-        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(-1, px(178));
-        alp.topMargin = px(16);
-        right.addView(dockCard(), alp);
+
+        LinearLayout chips = hbox();
+        chips.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
+        chipNet = chip(chips, R.drawable.st_wifi, LIME, "Wi-Fi");
+        chipNetIcon = (ImageView) ((ViewGroup) chipNet.getParent()).getChildAt(0);
+        chipGps = chip(chips, R.drawable.st_gps, LIME, "GPS");
+        chipOutside = chip(chips, R.drawable.st_temp, TEAL, "");
+        right.addView(chips, new LinearLayout.LayoutParams(-1, px(60)));
+        right.addView(mediaCard(), new LinearLayout.LayoutParams(-1, 0, 1));
+
+        LinearLayout bar = hbox();
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(-1, px(118));
+        alp.topMargin = px(14);
+        page.addView(bar, alp);
+        bar.addView(climaButton(), new LinearLayout.LayoutParams(px(270), px(96)));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(px(230), px(96));
+        clp.leftMargin = px(18);
+        bar.addView(carplayButton(), clp);
+        dock = hbox();
+        dock.setGravity(Gravity.CENTER_VERTICAL);
+        fillDock();
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, -1, 1);
+        dlp.leftMargin = px(10);
+        bar.addView(dock, dlp);
         return page;
     }
 
-    private View carplayCard() {
-        LinearLayout c = card(24);
-        c.addView(label("CarPlay"));
-        cpName = text(iphoneName(), 40, TXT, true);
-        c.addView(cpName, margins(-1, -2, 0, 12, 0, 0));
-        cpStatus = text("", 28, MUT, true);
-        c.addView(cpStatus, margins(-1, -2, 0, 6, 0, 0));
+    private View skyCard() {
+        FrameLayout c = new FrameLayout(this);
+        sky = new SkyView(this, px(30));
+        c.addView(sky, new FrameLayout.LayoutParams(-1, -1));
+        c.setPadding(0, 0, 0, 0);
+        FrameLayout in = new FrameLayout(this);
+        in.setPadding(px(30), px(30), px(30), px(20));
+        c.addView(in, new FrameLayout.LayoutParams(-1, -1));
 
-        FrameLayout art = new FrameLayout(this);
-        c.addView(art, new LinearLayout.LayoutParams(-1, 0, 1));
-        FrameLayout phone = new FrameLayout(this);
-        phone.setBackground(round(Color.TRANSPARENT, 30, LIME, 3));
-        FrameLayout.LayoutParams plp = new FrameLayout.LayoutParams(px(110), px(196), Gravity.CENTER);
-        art.addView(phone, plp);
-        View notch = new View(this);
-        notch.setBackground(round(LIME, 10, 0));
-        FrameLayout.LayoutParams nlp = new FrameLayout.LayoutParams(px(48), px(14), Gravity.CENTER_HORIZONTAL);
-        nlp.topMargin = px(12);
-        phone.addView(notch, nlp);
-        ImageView waves = new ImageView(this);
-        waves.setImageResource(R.drawable.waves);
-        FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(px(60), px(90), Gravity.CENTER);
-        wlp.leftMargin = px(95);   // just right of the phone
-        art.addView(waves, wlp);
-
-        TextView cta = text(Logic.t("Avvia CarPlay", "Start CarPlay"), 36, DARK, true);
-        cta.setGravity(Gravity.CENTER);
-        cta.setBackground(round(LIME, 18, 0));
-        cta.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                launch("com.suding.speedplay", "com.suding.speedplay.ui.MainActivity");
+        LinearLayout left = vbox();
+        TextClock clock = new TextClock(this);
+        clock.setFormat24Hour("HH:mm");
+        clock.setFormat12Hour("HH:mm");
+        style(clock, 136, TXT, true);
+        clock.setLetterSpacing(-0.03f);
+        left.addView(clock, margins(-2, -2, 14, 0, 0, 0));
+        TextClock date = new TextClock(this);
+        date.setFormat24Hour("EEEE d MMMM");
+        date.setFormat12Hour("EEEE d MMMM");
+        style(date, 32, 0xFFC9D2D6, true);
+        left.addView(date, margins(-2, -2, 18, 10, 0, 0));
+        LinearLayout g = vbox();
+        greet = text("", 44, TXT, true);
+        greetName = text("", 44, LIME, true);
+        g.addView(greet, new LinearLayout.LayoutParams(-1, -2));   // full width: wrap_content kept an old, shorter width
+        g.addView(greetName, margins(-1, -2, 0, 6, 0, 0));
+        g.setOnLongClickListener(new View.OnLongClickListener() {   // set the name in the greeting
+            @Override public boolean onLongClick(View v) {
+                askName();
+                return true;
             }
         });
-        c.addView(cta, new LinearLayout.LayoutParams(-1, px(104)));
+        left.addView(g, margins(-1, -2, 18, 16, 0, 0));
+        left.addView(new View(this), new LinearLayout.LayoutParams(-1, 0, 1));
+        LinearLayout a = hbox();
+        a.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView ai = new ImageView(this);
+        ai.setImageResource(R.drawable.w_pioggia);
+        ai.setColorFilter(Logic.meteoColor("pioggia"), PorterDuff.Mode.SRC_IN);
+        a.addView(ai, new LinearLayout.LayoutParams(px(36), px(36)));
+        alert = text("", 30, 0xFFBFE0FF, true);
+        a.addView(alert, margins(-2, -2, 12, 0, 0, 0));
+        a.addView(text("  ›", 32, MUT, true));
+        a.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                weatherHours();
+            }
+        });
+        left.addView(a, margins(-2, px(46), 18, 0, 0, 6));
+        hoursRow = hbox();
+        hoursRow.setPadding(px(6), px(6), px(6), px(6));
+        hoursRow.setBackground(round(0x47000000, 24, 0));
+        hoursRow.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                weatherHours();
+            }
+        });
+        for (int i = 0; i < 6; i++) {
+            LinearLayout cell = vbox();
+            cell.setGravity(Gravity.CENTER);
+            cell.addView(text("", 22, 0xFFD5DCEA, true), new LinearLayout.LayoutParams(-2, -2));
+            ImageView ic = new ImageView(this);
+            cell.addView(ic, margins(px(38), px(38), 0, 4, 0, 4));
+            cell.addView(text("", 28, TXT, true), new LinearLayout.LayoutParams(-2, -2));
+            hoursRow.addView(cell, new LinearLayout.LayoutParams(0, -1, 1));
+        }
+        left.addView(hoursRow, new LinearLayout.LayoutParams(-1, px(116)));
+        in.addView(left, new FrameLayout.LayoutParams(-1, -1));
+
+        LinearLayout w = vbox();
+        w.setGravity(Gravity.END);
+        w.setPadding(px(16), 0, 0, px(16));
+        wIcon = new ImageView(this);
+        w.addView(wIcon, new LinearLayout.LayoutParams(px(124), px(124)));
+        wTemp = text("--°", 84, TXT, true);
+        w.addView(wTemp, margins(-2, -2, 0, 4, 0, 0));
+        wText = text("", 30, TXT, true);
+        w.addView(wText, margins(-2, -2, 0, 8, 0, 0));
+        LinearLayout city = hbox();
+        city.setGravity(Gravity.CENTER_VERTICAL);
+        wPin = new ImageView(this);
+        wPin.setImageResource(R.drawable.st_gps);
+        city.addView(wPin, new LinearLayout.LayoutParams(px(32), px(32)));
+        wCity = text("", 30, 0xFFC9D2D6, true);
+        wCity.setSingleLine();
+        wCity.setEllipsize(TextUtils.TruncateAt.END);
+        wCity.setMaxWidth(px(230));
+        city.addView(wCity, margins(-2, -2, 8, 0, 0, 0));
+        city.addView(text(" ›", 32, MUT, true));
+        w.addView(city, margins(-2, -2, 0, 10, 0, 0));
+        w.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                meteoMenu();
+            }
+        });
+        in.addView(w, new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END));
         return c;
     }
 
-    private View climaCard() {
-        LinearLayout c = card(18);
+    private View mediaCard() {
+        LinearLayout c = card(30);
+        c.setPadding(px(34), px(30), px(34), px(30));
+        c.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                openPlaying();
+            }
+        });
         LinearLayout head = hbox();
         head.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = label(Logic.t("Clima", "Climate"));
-        title.setOnClickListener(new View.OnClickListener() {   // opens the full climate app
+        thumb = new ImageView(this);
+        thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);   // YouTube hqdefault is 4:3 with black bars: the 16:9 crop drops them
+        thumb.setOutlineProvider(new ViewOutlineProvider() {
+            @Override public void getOutline(View v, Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), px(22));
+            }
+        });
+        thumb.setClipToOutline(true);
+        head.addView(thumb, new LinearLayout.LayoutParams(px(240), px(135)));
+        LinearLayout who = vbox();
+        mChannel = text("", 34, TXT, true);
+        mChannel.setSingleLine();
+        mChannel.setEllipsize(TextUtils.TruncateAt.END);
+        mSub = text("", 26, MUT, true);
+        who.addView(mChannel);
+        who.addView(mSub, margins(-2, -2, 0, 10, 0, 0));
+        head.addView(who, weighted(margins(0, -2, 28, 0, 0, 0)));
+        c.addView(head);
+
+        mTitle = text("", 44, TXT, true);
+        mTitle.setMaxLines(2);
+        mTitle.setEllipsize(TextUtils.TruncateAt.END);
+        mTitle.setLineSpacing(px(4), 1f);
+        c.addView(mTitle, margins(-1, -2, 0, 26, 0, 0));
+        c.addView(new View(this), new LinearLayout.LayoutParams(-1, 0, 1));
+
+        LinearLayout row = hbox();
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        mProgress = hbox();
+        mProgress.setGravity(Gravity.CENTER_VERTICAL);
+        mPos = text("", 28, MUT, true);
+        mProgress.addView(mPos);
+        mBar = hbox();   // not draggable: a touch while driving must not jump in the video
+        View fill = new View(this);
+        fill.setBackground(round(LIME, 999, 0));
+        View rest = new View(this);
+        rest.setBackground(round(0x24FFFFFF, 999, 0));
+        mBar.addView(fill, new LinearLayout.LayoutParams(0, -1, 0));
+        mBar.addView(rest, new LinearLayout.LayoutParams(0, -1, 1));
+        mProgress.addView(mBar, weighted(margins(0, px(8), 18, 0, 18, 0)));
+        mDur = text("", 28, MUT, true);
+        mProgress.addView(mDur);
+        row.addView(mProgress, new LinearLayout.LayoutParams(0, -2, 1));
+        mControls = hbox();
+        mControls.addView(roundKey(R.drawable.m_prev, KeyEvent.KEYCODE_MEDIA_PREVIOUS, false));
+        mPlay = roundKey(R.drawable.m_pause, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, true);
+        mControls.addView(mPlay, margins(px(112), px(112), 22, 0, 0, 0));
+        mControls.addView(roundKey(R.drawable.m_next, KeyEvent.KEYCODE_MEDIA_NEXT, false), margins(px(112), px(112), 22, 0, 0, 0));
+        ((LinearLayout.LayoutParams) mControls.getChildAt(0).getLayoutParams()).width = px(112);
+        ((LinearLayout.LayoutParams) mControls.getChildAt(0).getLayoutParams()).height = px(112);
+        row.addView(mControls, margins(-2, -2, 26, 0, 0, 0));
+        c.addView(row);
+        return c;
+    }
+
+    private ImageView roundKey(int icon, int code, boolean main) {
+        ImageView b = new ImageView(this);
+        b.setImageResource(icon);
+        b.setColorFilter(main ? DARK : TXT, PorterDuff.Mode.SRC_IN);
+        b.setPadding(px(30), px(30), px(30), px(30));
+        b.setBackground(main ? round(LIME, 999, 0) : round(0x0DFFFFFF, 999, 0x40FFFFFF, 2));
+        b.setOnClickListener(mediaKey(code));
+        b.setLayoutParams(new LinearLayout.LayoutParams(px(112), px(112)));
+        return b;
+    }
+
+    private View climaButton() {
+        LinearLayout c = hbox();
+        c.setGravity(Gravity.CENTER_VERTICAL);
+        c.setPadding(px(28), 0, px(20), 0);
+        c.setBackground(round(0x142FD6A6, 999, 0x732FD6A6, 2));
+        climaDot = new View(this);
+        c.addView(climaDot, new LinearLayout.LayoutParams(px(22), px(22)));
+        LinearLayout t = vbox();
+        t.addView(text(Logic.t("Clima", "Climate"), 30, TXT, true));
+        climaSub = text("", 22, MUT, true);
+        climaSub.setSingleLine();
+        t.addView(climaSub, margins(-2, -2, 0, 4, 0, 0));
+        c.addView(t, weighted(margins(0, -2, 16, 0, 0, 0)));
+        c.setOnClickListener(new View.OnClickListener() {   // roadmap: our full-screen climate panel
             @Override public void onClick(View v) {
                 launch("com.bw.ac", "com.bw.ac.activity.MainActivity");
             }
         });
-        head.addView(title);
-        climaState = text("", 28, MUT, true);
-        head.addView(climaState, weighted(margins(0, -2, 16, 0, 0, 0)));
-        climaPower = hbox();
-        climaPower.setGravity(Gravity.CENTER);
-        climaPowerIcon = new ImageView(this);
-        climaPowerIcon.setImageResource(R.drawable.ic_power);
-        climaPower.setContentDescription(Logic.t("Accendi o spegni il clima", "Turn climate on or off"));
-        climaPower.addView(climaPowerIcon, new LinearLayout.LayoutParams(px(38), px(38)));
-        climaPower.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (!hvac.ready()) { notAvailable(); return; }
-                // off: like the original card, switching on goes through the A/C key
-                press(hvac.getBool(Hvac.POWER_ON, Hvac.AREA_ROW) ? Hvac.KEY_OFF : Hvac.KEY_AC);
-            }
-        });
-        head.addView(climaPower, new LinearLayout.LayoutParams(px(96), px(60)));
-        c.addView(head);
-
-        LinearLayout row = hbox();
-        LinearLayout lvGroup = vbox();
-        climaUnit = text(Logic.t("Livello", "Level"), 22, MUT, true);
-        lvGroup.addView(climaUnit);
-        LinearLayout lv = hbox();
-        lv.setGravity(Gravity.CENTER_VERTICAL);
-        lv.addView(button("−", key(Hvac.KEY_TEMP_DOWN), COLD), new LinearLayout.LayoutParams(px(78), px(78)));
-        climaLevel = text("—", 56, TXT, true);
-        climaLevel.setGravity(Gravity.CENTER);
-        lv.addView(climaLevel, new LinearLayout.LayoutParams(px(120), -2));
-        lv.addView(button("+", key(Hvac.KEY_TEMP_UP), HOT), new LinearLayout.LayoutParams(px(78), px(78)));
-        lvGroup.addView(lv, margins(-2, -2, 0, 6, 0, 0));
-        row.addView(lvGroup);
-
-        LinearLayout fanGroup = vbox();
-        fanText = text(Logic.t("Ventola", "Fan"), 22, MUT, true);
-        fanGroup.addView(fanText);
-        LinearLayout fanBox = hbox();
-        fanBox.setGravity(Gravity.CENTER_VERTICAL);
-        fanBox.addView(button("−", Hvac.KEY_FAN_DOWN), new LinearLayout.LayoutParams(px(78), px(78)));
-        LinearLayout fan = hbox();
-        for (int i = 0; i < 8; i++) {
-            fanSeg[i] = new View(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1);
-            lp.leftMargin = lp.rightMargin = px(2);
-            fan.addView(fanSeg[i], lp);
-        }
-        fanBox.addView(fan, weighted(margins(0, px(22), 10, 0, 10, 0)));
-        fanBox.addView(button("+", Hvac.KEY_FAN_UP), new LinearLayout.LayoutParams(px(78), px(78)));
-        fanGroup.addView(fanBox, margins(-1, -2, 0, 6, 0, 0));
-        row.addView(fanGroup, weighted(margins(0, -2, 22, 0, 0, 0)));
-        c.addView(row, margins(-1, -2, 0, 4, 0, 0));
-
-        LinearLayout modes = hbox();
-        for (int i = 0; i < 4; i++) {
-            final int m = i;
-            LinearLayout cell = vbox();
-            cell.setGravity(Gravity.CENTER);
-            ImageView iv = new ImageView(this);
-            iv.setImageResource(getResources().getIdentifier("mode_" + i, "drawable", getPackageName()));
-            cell.addView(iv, new LinearLayout.LayoutParams(px(50), px(50)));
-            TextView t = text(Logic.modeName(i), 23, TXT, true);
-            t.setSingleLine();
-            cell.addView(t, margins(-2, -2, 0, 0, 0, 0));
-            cell.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    setMode(m);
-                }
-            });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1);
-            if (i > 0) lp.leftMargin = px(10);
-            modes.addView(cell, lp);
-            modeCell[i] = cell;
-            modeSelected(i, false);
-        }
-        c.addView(modes, margins(-1, px(86), 0, 10, 0, 0));
-
-        LinearLayout tg = hbox();
-        tAc = toggleView(tg, "A/C", Hvac.KEY_AC);
-        tRecirc = toggleView(tg, Logic.t("Ricircolo", "Recirculation"), Hvac.KEY_RECIRC);
-        tDefrost = toggleView(tg, Logic.t("Parabrezza", "Windscreen"), Hvac.KEY_DEFROST);
-        tRear = toggleView(tg, Logic.t("Lunotto", "Rear window"), Hvac.KEY_REAR_DEFROST);
-        c.addView(tg, margins(-1, px(62), 0, 10, 0, 0));
         return c;
     }
 
-    private TextView toggleView(LinearLayout parent, String s, int key) {
-        TextView t = text(s, 26, TXT, true);
-        t.setGravity(Gravity.CENTER);
-        t.setSingleLine();
-        t.setOnClickListener(key(key));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1);
-        if (parent.getChildCount() > 0) lp.leftMargin = px(10);
-        parent.addView(t, lp);
-        toggle(t, false);
+    private View carplayButton() {
+        LinearLayout c = hbox();
+        c.setGravity(Gravity.CENTER);
+        c.setBackground(round(0x0FC5F56C, 999, LIME, 3));
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(R.drawable.st_phone);
+        iv.setColorFilter(LIME, PorterDuff.Mode.SRC_IN);
+        c.addView(iv, new LinearLayout.LayoutParams(px(42), px(42)));
+        c.addView(text("CarPlay", 32, LIME, true), margins(-2, -2, 10, 0, 0, 0));
+        c.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                launch(SPEEDPLAY, "com.suding.speedplay.ui.MainActivity");
+            }
+        });
+        return c;
+    }
+
+    // ---------------------------------------------------------------- weather screen: city from GPS, search, last cities
+
+    private FrameLayout root, overlay;
+    private LinearLayout sheet;
+    private TextView cityShow;   // typed city, shown above our big keyboard (the unit's IME is small and Chinese-first)
+    private String typed = "";
+    private final Runnable liveSearch = new Runnable() {
+        @Override public void run() {
+            searchCity(typed.trim());
+        }
+    };
+
+    /** Tap on the weather: a big in-car screen instead of a small dialog. */
+    private void meteoMenu() {
+        closeSheet();
+        overlay = new FrameLayout(this);
+        overlay.setBackgroundColor(0xCC000000);
+        overlay.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                closeSheet();
+            }
+        });
+        sheet = vbox();
+        sheet.setClickable(true);
+        sheet.setPadding(px(48), px(36), px(48), px(40));
+        sheet.setBackground(round(0xFF101A1D, 30, 0x40FFFFFF, 2));
+        overlay.addView(sheet, new FrameLayout.LayoutParams(px(1320), -2, Gravity.CENTER_HORIZONTAL | Gravity.TOP));
+        ((FrameLayout.LayoutParams) sheet.getLayoutParams()).topMargin = px(40);
+        root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
+        fillSheet(null, false);
+    }
+
+    private void closeSheet() {
+        if (overlay == null) return;
+        h.removeCallbacks(liveSearch);
+        root.removeView(overlay);
+        overlay = null;
+        cityShow = null;
+    }
+
+    private void fillSheet(List<Weather.Place> results, boolean searching) {
+        sheet.removeAllViews();
+        if (searching) { searchSheet(); return; }
+        sheet.setPadding(px(48), px(36), px(48), px(40));
+        boolean fixed = prefs.contains("fix_city");
+        Weather.Data d = weather.cached();
+
+        LinearLayout head = hbox();
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout tt = vbox();
+        tt.addView(text(Logic.t("Meteo", "Weather"), 46, LIME, true));
+        String now = d != null && d.city != null ? d.city : Logic.t("posizione non ancora nota", "location not known yet");
+        tt.addView(text(now + " · " + (fixed ? Logic.t("scelta a mano", "chosen by hand") : Logic.t("dal GPS", "from GPS")), 28, MUT, true), margins(-2, -2, 0, 8, 0, 0));
+        head.addView(tt, weighted(margins(0, -2, 0, 0, 0, 0)));
+        head.addView(pill("‹  Home", false, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                closeSheet();
+            }
+        }), new LinearLayout.LayoutParams(px(220), px(96)));
+        sheet.addView(head);
+
+        LinearLayout acts = hbox();
+        acts.addView(pill(Logic.t("Città dal GPS", "City from GPS"), !fixed, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                cityFromGps(prefs);
+                refreshWeatherNow();
+                closeSheet();
+            }
+        }), new LinearLayout.LayoutParams(0, px(104), 1));
+        acts.addView(pill(Logic.t("Cerca una città", "Search a city"), searching, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                typed = "";   // no speed lock: the owner's choice (02/11)
+                fillSheet(null, true);
+            }
+        }), weighted(margins(0, px(104), 18, 0, 0, 0)));
+        acts.addView(pill(Logic.t("Aggiorna", "Refresh"), false, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                refreshWeatherNow();
+                closeSheet();
+            }
+        }), weighted(margins(0, px(104), 18, 0, 0, 0)));
+        String pLat = prefs.getString("park_lat", null), pLon = prefs.getString("park_lon", null);
+        final Intent park = new Intent(Intent.ACTION_VIEW, Uri.parse("geo:" + pLat + "," + pLon + "?q=" + pLat + "," + pLon + "(Auto)"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (pLat != null && park.resolveActivity(getPackageManager()) != null)   // hidden without a map app or a position
+            acts.addView(pill(Logic.t("Dove ho parcheggiato", "Where I parked"), false, new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    closeSheet();
+                    startActivity(park);
+                }
+            }), weighted(margins(0, px(104), 18, 0, 0, 0)));
+        sheet.addView(acts, margins(-1, -2, 0, 30, 0, 0));
+
+        List<Weather.Place> list = results != null ? results : recentCities(prefs);
+        if (!list.isEmpty()) {
+            sheet.addView(text(results != null ? Logic.t("Risultati", "Results") : Logic.t("Ultime città", "Recent cities"), 28, MUT, true), margins(-2, -2, 0, 30, 0, 0));
+            LinearLayout grid = hbox();
+            for (int i = 0; i < Math.min(3, list.size()); i++) {
+                final Weather.Place p = list.get(i);
+                View b = pill(results != null ? p.label : p.name, false, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        setCity(p);
+                        closeSheet();
+                    }
+                });
+                grid.addView(b, i == 0 ? new LinearLayout.LayoutParams(0, px(104), 1) : weighted(margins(0, px(104), 18, 0, 0, 0)));
+            }
+            sheet.addView(grid, margins(-1, -2, 0, 14, 0, 0));
+        }
+    }
+
+    /** Search screen: what you typed, the cities found so far, and a big keyboard (search starts after 3 letters). */
+    private void searchSheet() {
+        sheet.setPadding(px(36), px(22), px(36), px(24));
+        LinearLayout head = hbox();
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        cityShow = text("", 40, TXT, true);
+        cityShow.setSingleLine();
+        cityShow.setEllipsize(TextUtils.TruncateAt.START);
+        cityShow.setGravity(Gravity.CENTER_VERTICAL);
+        cityShow.setPadding(px(26), 0, px(26), 0);
+        cityShow.setBackground(round(0x14FFFFFF, 20, 0x40FFFFFF, 2));
+        head.addView(cityShow, new LinearLayout.LayoutParams(0, px(84), 1));
+        head.addView(pill(Logic.t("‹  Indietro", "‹  Back"), false, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                h.removeCallbacks(liveSearch);
+                fillSheet(null, false);
+            }
+        }), margins(px(240), px(84), 18, 0, 0, 0));
+        sheet.addView(head);
+        found = hbox();
+        sheet.addView(found, margins(-1, px(84), 0, 14, 0, 0));
+        showTyped();
+        String[] rows = {"QWERTYUIOP", "ASDFGHJKL'", "ZXCVBNM"};
+        for (String row : rows) {
+            LinearLayout kr = hbox();
+            for (final char ch : row.toCharArray()) kr.addView(key(String.valueOf(ch), false, new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    type(typed + (typed.isEmpty() || typed.endsWith(" ") ? ch : Character.toLowerCase(ch)));
+                }
+            }), weighted(margins(0, px(80), 0, 0, 8, 0)));
+            if (row.length() == 7) {   // last letter row: delete key on the right
+                kr.addView(key("⌫", false, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (!typed.isEmpty()) type(typed.substring(0, typed.length() - 1));
+                    }
+                }), margins(0, px(80), 0, 0, 8, 0));
+                ((LinearLayout.LayoutParams) kr.getChildAt(kr.getChildCount() - 1).getLayoutParams()).weight = 3;
+            }
+            sheet.addView(kr, margins(-1, -2, 0, 10, -8, 0));
+        }
+        LinearLayout last = hbox();
+        last.addView(key(Logic.t("spazio", "space"), false, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (!typed.isEmpty() && !typed.endsWith(" ")) type(typed + " ");
+            }
+        }), new LinearLayout.LayoutParams(0, px(80), 3));
+        last.addView(key(Logic.t("Cerca", "Search"), true, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                h.removeCallbacks(liveSearch);
+                searchCity(typed.trim());
+            }
+        }), weighted(margins(0, px(80), 10, 0, 0, 0)));
+        sheet.addView(last, margins(-1, -2, 0, 10, 0, 0));
+    }
+
+    private LinearLayout found;
+
+    private TextView key(String s, boolean on, View.OnClickListener click) {
+        TextView t = pill(s, on, click);
+        style(t, 34, on ? DARK : TXT, true);
+        t.setPadding(0, 0, 0, 0);
         return t;
     }
 
-    private View button(String s, int key) {
-        return button(s, key(key), 0);
+    private void type(String s) {
+        typed = s;
+        showTyped();
+        h.removeCallbacks(liveSearch);
+        if (typed.trim().length() >= 3) h.postDelayed(liveSearch, 600);   // search while typing, once the finger stops
     }
 
-    /** color != 0: tinted button (blue = colder, red = warmer). */
-    private View button(String s, View.OnClickListener click, int color) {
-        TextView t = text(s, 44, color != 0 ? color : TXT, true);
+    /** "Scrivi in auto" from the iPhone (via CyberZec Set): fills the open city search and searches. False if it is not open. */
+    boolean typeFromSet(String s) {
+        if (!resumed || cityShow == null) return false;
+        h.removeCallbacks(liveSearch);
+        typed = s;
+        showTyped();
+        searchCity(typed.trim());
+        return true;
+    }
+
+    private void showTyped() {
+        if (cityShow == null) return;
+        cityShow.setText(typed.isEmpty() ? Logic.t("Scrivi la città", "Type the city") : typed + "_");
+        cityShow.setTextColor(typed.isEmpty() ? MUT : TXT);
+        if (typed.trim().length() < 3) showFound(null);
+    }
+
+    /** Up to 3 cities under the field; null = hint. */
+    private void showFound(List<Weather.Place> res) {
+        found.removeAllViews();
+        if (res == null || res.isEmpty()) {
+            TextView hint = text(res == null ? Logic.t("Dopo 3 lettere compaiono le città", "Cities appear after 3 letters")
+                    : Logic.t("Nessuna città trovata", "No city found"), 28, MUT, true);
+            hint.setGravity(Gravity.CENTER_VERTICAL);
+            found.addView(hint, new LinearLayout.LayoutParams(-1, -1));
+            return;
+        }
+        for (int i = 0; i < Math.min(3, res.size()); i++) {
+            final Weather.Place p = res.get(i);
+            found.addView(pill(p.label, i == 0, new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    setCity(p);
+                    closeSheet();
+                }
+            }), i == 0 ? new LinearLayout.LayoutParams(0, -1, 1) : weighted(margins(0, -1, 14, 0, 0, 0)));
+        }
+    }
+
+    /** Big rounded button; on = lime. */
+    private TextView pill(String s, boolean on, View.OnClickListener click) {
+        TextView t = text(s, 30, on ? DARK : TXT, true);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(color != 0 ? round(color & 0x00FFFFFF | 0x26000000, 18, color, 2) : round(0x0DFFFFFF, 18, LINE));
+        t.setMaxLines(2);
+        t.setEllipsize(TextUtils.TruncateAt.END);
+        t.setPadding(px(18), 0, px(18), 0);
+        t.setBackground(on ? round(LIME, 22, 0) : round(0x0FFFFFFF, 22, 0x40FFFFFF, 2));
         t.setOnClickListener(click);
         return t;
     }
 
-    private View meteoCard() {
-        LinearLayout c = card(22);
-        LinearLayout head = hbox();
-        head.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView pin = new ImageView(this);
-        pin.setImageResource(R.drawable.st_gps);
-        pin.setColorFilter(LIME, PorterDuff.Mode.SRC_IN);
-        head.addView(pin, new LinearLayout.LayoutParams(px(38), px(38)));
-        mCity = text("", 34, TXT, true);
-        mCity.setSingleLine();
-        mCity.setEllipsize(TextUtils.TruncateAt.END);
-        head.addView(mCity, weighted(margins(0, -2, 10, 0, 0, 0)));
-        c.addView(head);
+    private void searchCity(final String q) {
+        if (q.isEmpty()) return;
+        new Thread(new Runnable() {
+            @Override public void run() {
+                List<Weather.Place> found = null;
+                try {
+                    found = Weather.search(q);
+                } catch (Exception e) {
+                    Log.i(Weather.TAG, "ricerca citta fallita: " + e);
+                }
+                final List<Weather.Place> res = found;
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (cityShow == null || !q.equals(typed.trim())) return;   // closed, or the text changed meanwhile
+                        if (res == null) toast(Logic.t("Serve Internet per cercare", "Internet is needed to search"));
+                        else showFound(res);
+                    }
+                });
+            }
+        }, "cerca-citta").start();
+    }
 
-        LinearLayout r = hbox();
-        r.setGravity(Gravity.CENTER_VERTICAL);
-        mIcon = new ImageView(this);
-        mIcon.setColorFilter(LIME, PorterDuff.Mode.SRC_IN);
-        r.addView(mIcon, new LinearLayout.LayoutParams(px(110), px(110)));
-        mTemp = text("--°", 96, TXT, true);
-        r.addView(mTemp, margins(-2, -2, 16, 0, 0, 0));
-        LinearLayout desc = vbox();
-        mText = text("", 30, TXT, true);
-        mText.setMaxLines(2);
-        mText.setEllipsize(TextUtils.TruncateAt.END);
-        mMinMax = text("", 26, MUT, true);
-        desc.addView(mText);
-        desc.addView(mMinMax, margins(-2, -2, 0, 6, 0, 0));
-        r.addView(desc, weighted(margins(0, -2, 18, 0, 0, 0)));
-        c.addView(new View(this), new LinearLayout.LayoutParams(-1, 0, 1));
-        c.addView(r);
+    private void setCity(Weather.Place p) {
+        saveCity(prefs, p);
+        refreshWeatherNow();
+    }
 
-        LinearLayout hours = hbox();
-        for (int i = 0; i < 6; i++) {
-            LinearLayout col = vbox();
-            col.setGravity(Gravity.CENTER_HORIZONTAL);
-            mHour[i] = text("", 22, MUT, true);
-            mHourT[i] = text("", 32, i == 5 ? LIME : TXT, true);
-            col.addView(mHour[i]);
-            col.addView(mHourT[i], margins(-2, -2, 0, 6, 0, 0));
-            hours.addView(col, new LinearLayout.LayoutParams(0, -2, 1));
+    /** Also used by SettingsReceiver (CyberZec Set), with or without the Home open. */
+    static void cityFromGps(SharedPreferences prefs) {
+        prefs.edit().remove("fix_city").remove("fix_lat").remove("fix_lon").remove("city").apply();
+    }
+
+    static void saveCity(SharedPreferences prefs, Weather.Place p) {
+        p.name = p.name.replaceAll("[|;]", " ");   // separators of the "recent" list
+        prefs.edit().putString("fix_city", p.name).putString("fix_lat", String.valueOf(p.lat))
+                .putString("fix_lon", String.valueOf(p.lon)).putString("city", p.name).apply();
+        List<Weather.Place> r = recentCities(prefs);
+        StringBuilder b = new StringBuilder(p.name + "|" + p.lat + "|" + p.lon);
+        int n = 1;
+        for (Weather.Place q : r) if (!q.name.equals(p.name) && n++ < 3) b.append(";").append(q.name).append("|").append(q.lat).append("|").append(q.lon);
+        prefs.edit().putString("recent", b.toString()).putLong("at", 0).apply();
+    }
+
+    /** Last 3 chosen cities, newest first ("name|lat|lon;..."). */
+    static List<Weather.Place> recentCities(SharedPreferences prefs) {
+        List<Weather.Place> out = new ArrayList<>();
+        for (String e : prefs.getString("recent", "").split(";")) {
+            String[] f = e.split("\\|");
+            if (f.length != 3) continue;
+            Weather.Place p = new Weather.Place();
+            p.name = p.label = f[0];
+            try {
+                p.lat = Double.parseDouble(f[1]);
+                p.lon = Double.parseDouble(f[2]);
+                out.add(p);
+            } catch (NumberFormatException ignored) {
+            }
         }
-        View spacer = new View(this);
-        c.addView(spacer, new LinearLayout.LayoutParams(-1, 0, 1));
-        c.addView(hours);
-        return c;
+        return out;
+    }
+
+    /** A setting changed from CyberZec Set (SettingsReceiver). */
+    void settingsChanged(String key) {
+        if ("city".equals(key)) lastWeatherTry = 0;
+        showWeather(weather.cached());
+        if (resumed) updateStatus();   // sky, name, and the new city's weather
+    }
+
+    private void refreshWeatherNow() {
+        prefs.edit().putLong("at", 0).apply();
+        lastWeatherTry = 0;
+        showWeather(weather.cached());
+        updateStatus();
+    }
+
+    private void toast(String s) {
+        Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
 
     // ---------------------------------------------------------------- bottom bar: 6 apps chosen by the owner (long press)
@@ -677,20 +1179,12 @@ public class HomeActivity extends Activity {
         launch(comp.substring(0, s), comp.substring(s + 1));
     }
 
-    private View dockCard() {
-        dock = card(14);
-        dock.setOrientation(LinearLayout.HORIZONTAL);
-        dock.setGravity(Gravity.CENTER_VERTICAL);
-        fillDock();
-        return dock;
-    }
-
     private void fillDock() {
         dock.removeAllViews();
         final String[] d = dockApps();
         for (int i = 0; i < d.length; i++) {
             final int slot = i;
-            View cell = appCell(dockIcon(d[i]), appName(d[i]), 104);
+            View cell = appCell(dockIcon(d[i]), appName(d[i]), 64, 26);
             cell.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     launch(d[slot]);
@@ -878,20 +1372,22 @@ public class HomeActivity extends Activity {
             head.addView(back, new LinearLayout.LayoutParams(-2, px(72)));
             page.addView(head, new LinearLayout.LayoutParams(-1, px(78)));
 
-            LinearLayout grid = card(18);
+            LinearLayout grid = vbox();   // one dark tile per app, like the cards of page 1
             LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(-1, 0, 1);
-            glp.topMargin = px(18);
+            glp.topMargin = px(10);
             page.addView(grid, glp);
             for (int r = 0; r < APPS_PER_PAGE / COLS; r++) {
                 LinearLayout line = hbox();
-                line.setGravity(Gravity.CENTER_VERTICAL);
                 grid.addView(line, new LinearLayout.LayoutParams(-1, 0, 1));
                 for (int cc = 0; cc < COLS; cc++) {
                     int i = p * APPS_PER_PAGE + r * COLS + cc;
                     View cell;
                     if (i < apps.size()) {
                         final AppRef ai = new AppRef(apps.get(i));
-                        cell = appCell(icon(apps.get(i), pm), apps.get(i).loadLabel(pm).toString(), 128);
+                        LinearLayout tile = card(8);
+                        tile.setGravity(Gravity.CENTER);
+                        tile.addView(appCell(icon(apps.get(i), pm), apps.get(i).loadLabel(pm).toString(), 100, 28));
+                        cell = tile;
                         cell.setOnClickListener(new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 launch(ai.pkg, ai.cls);
@@ -904,7 +1400,7 @@ public class HomeActivity extends Activity {
                             }
                         });
                     } else cell = new View(this);
-                    line.addView(cell, new LinearLayout.LayoutParams(0, -2, 1));
+                    line.addView(cell, weighted(margins(0, -1, 7, 7, 7, 7)));
                 }
             }
             pager.row.addView(page, new LinearLayout.LayoutParams(pager.getWidth() > 0 ? pager.getWidth() : -1, -1));
@@ -931,14 +1427,14 @@ public class HomeActivity extends Activity {
         return a != 0 ? getDrawable(a) : ri.loadIcon(pm);
     }
 
-    private View appCell(Drawable d, String label, int size) {
+    private View appCell(Drawable d, String label, int size, int textSize) {
         LinearLayout cell = vbox();
         cell.setGravity(Gravity.CENTER_HORIZONTAL);
         ImageView iv = new ImageView(this);
         iv.setImageDrawable(d);
         iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
         cell.addView(iv, new LinearLayout.LayoutParams(px(size), px(size)));
-        TextView t = text(label, 26, TXT, true);
+        TextView t = text(label, textSize, TXT, true);
         t.setSingleLine();
         t.setEllipsize(TextUtils.TruncateAt.END);
         t.setGravity(Gravity.CENTER);
@@ -965,17 +1461,6 @@ public class HomeActivity extends Activity {
             Log.i(TAG, "avvio " + pkg + " fallito: " + e);
         }
         Toast.makeText(this, Logic.t("App non disponibile", "App not available"), Toast.LENGTH_SHORT).show();
-    }
-
-    private String iphoneName() {
-        try {
-            BluetoothAdapter bt = BluetoothAdapter.getDefaultAdapter();
-            if (bt != null)
-                for (BluetoothDevice d : bt.getBondedDevices())
-                    if (d.getName() != null && d.getName().toLowerCase(Locale.ROOT).contains("iphone")) return d.getName();
-        } catch (Exception ignored) {
-        }
-        return "iPhone";
     }
 
     // ---------------------------------------------------------------- view helpers (sizes in 240 dpi mockup pixels)
@@ -1035,8 +1520,7 @@ public class HomeActivity extends Activity {
     private TextView chip(LinearLayout parent, int icon, int tint, String s) {
         LinearLayout c = hbox();
         c.setGravity(Gravity.CENTER_VERTICAL);
-        c.setPadding(px(20), px(10), px(24), px(10));
-        c.setBackground(round(0xCC111B1C, 999, LINE));
+        c.setPadding(px(18), 0, px(6), 0);   // plain indicator, not a button
         ImageView iv = new ImageView(this);
         iv.setImageResource(icon);
         iv.setColorFilter(tint, PorterDuff.Mode.SRC_IN);

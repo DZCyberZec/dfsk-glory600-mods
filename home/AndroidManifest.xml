@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="it.cyberzec.home" android:versionCode="13" android:versionName="0.6">
+    package="it.cyberzec.home" android:versionCode="22" android:versionName="0.15">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="28" />
+    <!-- CyberZec Set changes Home settings and reads its status (apps signed with the same key) -->
+    <permission android:name="it.cyberzec.permission.SETTINGS" android:protectionLevel="signature" />
+    <uses-permission android:name="it.cyberzec.permission.SETTINGS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <!-- read the media session (granted only to apps signed with the system key: without it the media card stays empty) -->
+    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
 
     <application android:label="@string/app_name" android:icon="@mipmap/ic_launcher"
         android:allowBackup="false" android:usesCleartextTraffic="false">
@@ -25,5 +30,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver android:name=".SettingsReceiver" android:exported="true"
+            android:permission="it.cyberzec.permission.SETTINGS">
+            <intent-filter>
+                <action android:name="it.cyberzec.home.SET" />
+            </intent-filter>
+        </receiver>
+        <provider android:name=".StatusProvider" android:authorities="it.cyberzec.home.status"
+            android:exported="true" android:readPermission="it.cyberzec.permission.SETTINGS"
+            android:writePermission="it.cyberzec.permission.SETTINGS" />
     </application>
 </manifest>
