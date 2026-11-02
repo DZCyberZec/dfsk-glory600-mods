@@ -7,6 +7,12 @@
 
 ▶ **[Video demo](docs/demo.mp4)** (emulatore: lì il clima è simulato, in auto comanda quello vero)
 
+![Home CyberZec: ora, meteo a ore, brano in riproduzione, clima e barra app](docs/screenshots/home.png)
+
+![Ricerca città con la tastiera grande](docs/screenshots/city_search.png)
+
+![Tastiera CyberZec](docs/screenshots/keyboard.png)
+
 ![Pagina "Tutte le app" in auto: le app di serie hanno le icone Aurora](docs/car_all_apps.png)
 
 ## Problemi risolti

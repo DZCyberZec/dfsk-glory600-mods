@@ -9,6 +9,12 @@
 
 ▶ **[Demo video](docs/demo.mp4)** (25 s, Android emulator: on the emulator the climate is simulated, on the car it drives the real one)
 
+![Home CyberZec: clock, weather with hourly forecast, media card, climate and app bar](docs/screenshots/home.png)
+
+![City search with the big keyboard](docs/screenshots/city_search.png)
+
+![Tastiera CyberZec](docs/screenshots/keyboard.png)
+
 ![All apps page on the car: stock apps get the Aurora icon style](docs/car_all_apps.png)
 
 ## Problems this fixes
