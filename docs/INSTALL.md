@@ -7,7 +7,7 @@ Every piece is independent: install only what you need.
 **1. Language.** There is one version of each app, not an Italian one and an English one.
 The apps follow the language of the head unit:
 
-| Head unit language (Settings → Language) | Home CyberZec and DFSK Helper show | Install the translation overlays? |
+| Head unit language (Settings → Language) | Home CyberZec and CyberZec Set show | Install the translation overlays? |
 |---|---|---|
 | Italiano | Italian | **Yes**: they translate the stock BW apps (camera, settings, climate…) |
 | English or any other | English | **No**: the overlays only add Italian. Skip step 4 below |
@@ -23,7 +23,7 @@ Want another language? Copy `translations/<App>/values-it` to `values-<your lang
 | The stock apps in Italian | the `*_it_overlay.apk` files (step 4) |
 | Everything | all of the above |
 
-Not sure? Start with **DFSK Helper** alone: it changes the least, and `restore_stock.sh` removes it in seconds.
+Not sure? Start with **CyberZec Set** alone: it changes the least, and `restore_stock.sh` removes it in seconds.
 
 ## Install (no computer needed)
 0. Download the files from the [latest release](https://github.com/DZCyberZec/dfsk-glory600-mods/releases) (or build them, see the README).
@@ -45,7 +45,7 @@ Not sure? Start with **DFSK Helper** alone: it changes the least, and `restore_s
 ## Restore to stock
 Use it before dealership service or warranty work, or any time you want to hide the mods.
 
-**What it removes:** Home CyberZec (`it.cyberzec.home`), DFSK Helper (`it.dfsk.helper`) and every Italian overlay (`it.dfsk.overlay.*`), and it sets the stock Home (`com.android.launcher3/.Launcher`) back as default. Apps you installed yourself (for example E5 Launcher Plus) are left alone; remove them by hand if you want.
+**What it removes:** Home CyberZec (`it.cyberzec.home`), CyberZec Set (`it.dfsk.helper`) and every Italian overlay (`it.dfsk.overlay.*`), and it sets the stock Home (`com.android.launcher3/.Launcher`) back as default. Apps you installed yourself (for example E5 Launcher Plus) are left alone; remove them by hand if you want.
 
 **No trace in /system:** these mods never write to `/system`, so after removal the unit is exactly as the factory left it.
 

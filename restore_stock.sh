@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Restore the head unit to stock: removes what this repo installs (Home CyberZec,
-# DFSK Helper, Italian overlays) and puts the stock Home back. Touches nothing else.
+# CyberZec Set, Italian overlays) and puts the stock Home back. Touches nothing else.
 # Usage: ./restore_stock.sh [-s <serial>] [--yes] [-h]
 set -u
 

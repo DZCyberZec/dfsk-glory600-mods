@@ -5,9 +5,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <application android:label="DFSK Helper" android:icon="@mipmap/ic_launcher"
+    <application android:label="CyberZec Set" android:icon="@mipmap/ic_launcher"
         android:allowBackup="false">
-        <activity android:name=".MainActivity" android:label="DFSK Helper">
+        <activity android:name=".MainActivity" android:label="CyberZec Set">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -17,7 +17,7 @@
         <service android:name=".HelperService" android:exported="false" />
 
         <service android:name=".VolumeService" android:exported="true"
-            android:label="DFSK Helper - Volume chiamata dal volante"
+            android:label="CyberZec Set - Volume chiamata dal volante"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />

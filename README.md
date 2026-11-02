@@ -18,9 +18,9 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 ### CarPlay (SpeedPlay)
 | Problem | Fix |
 |---|---|
-| **Music stops every time you shift into reverse** and doesn't always come back | DFSK Helper: choose *Ducked* or *Lower* – music keeps playing, quieter, while the camera is on |
-| **Steering-wheel volume keys don't change call volume** during CarPlay calls | DFSK Helper: wheel keys control the call volume while a call is active |
-| **Call and voice quality over CarPlay** (phone, WhatsApp, Siri): the other party hears you muffled / distorted | **Fixed.** Stock SpeedPlay mic gain is ×5; lowering it to ×1 cleans it up. DFSK Helper → *CarPlay microphone* level 1/2/3 (1 recommended); or set `persist.suding.mic.gainlevel.default` to 1 (needs system privileges, e.g. `adb shell setprop`, see [TECH_NOTES](docs/TECH_NOTES.md)). Tested in a real call: sounds almost like calling from the phone |
+| **Music stops every time you shift into reverse** and doesn't always come back | CyberZec Set: choose *Ducked* or *Lower* – music keeps playing, quieter, while the camera is on |
+| **Steering-wheel volume keys don't change call volume** during CarPlay calls | CyberZec Set: wheel keys control the call volume while a call is active |
+| **Call and voice quality over CarPlay** (phone, WhatsApp, Siri): the other party hears you muffled / distorted | **Fixed.** Stock SpeedPlay mic gain is ×5; lowering it to ×1 cleans it up. CyberZec Set → *CarPlay microphone* level 1/2/3 (1 recommended); or set `persist.suding.mic.gainlevel.default` to 1 (needs system privileges, e.g. `adb shell setprop`, see [TECH_NOTES](docs/TECH_NOTES.md)). Tested in a real call: sounds almost like calling from the phone |
 | **Car Wi-Fi drops right after start-up** | Not a bug: with the iPhone's Bluetooth on, CarPlay over Bluetooth takes over the `ap0` hotspot. Use the cable, or turn the phone's Bluetooth off for car Wi-Fi |
 | No way to see if CarPlay is connected from the home screen | Home CyberZec shows a CarPlay chip (`bw.carplay.connect.state` 2 = cable) |
 
@@ -36,7 +36,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 | Problem | Fix |
 |---|---|
 | Stock apps half in English/Chinese, **camera app forced to English** | Italian translation overlays for 16 apps (translate to your language by copying a folder) |
-| After start-up the home screen still shows the old texts | The stock launcher starts before translations load: restarting it fixes it (DFSK Helper system build does it automatically) |
+| After start-up the home screen still shows the old texts | The stock launcher starts before translations load: restarting it fixes it (CyberZec Set system build does it automatically) |
 | Small text and icons, hard to read while driving | Home CyberZec: sizes from Android's "Design for Driving" guidelines |
 | Useless apps (duplicate navigators, updater, tools) in the app list | Home CyberZec: long-press → hide |
 
@@ -45,7 +45,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 | Folder | What it is | Tested on the car |
 |---|---|---|
 | [`home/`](home) | **Home CyberZec** – a driver-friendly launcher with real climate control | ✅ (see note below) |
-| [`helper/`](helper) | **DFSK Helper** – CarPlay music keeps playing in reverse, steering-wheel call volume | ✅ |
+| [`helper/`](helper) | **CyberZec Set** – CarPlay music keeps playing in reverse, steering-wheel call volume | ✅ |
 | [`translations/`](translations) | Italian translation of 16 stock apps, as RRO overlays | ✅ (see note below) |
 | [`icons/`](icons) | "Aurora" icon set (generator + SVG) | ✅ |
 | [`docs/`](docs) | Install / restore guide, technical notes for developers | – |
@@ -61,7 +61,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 - Swipe right for all apps.
 - **Configure it from the app itself, no settings files:** long-press an app → put it in the bottom bar (6 slots) or hide it; "Hidden (N)" brings apps back.
 
-### DFSK Helper
+### CyberZec Set (formerly DFSK Helper)
 - **Reverse gear + CarPlay**: stock unit pauses your music every time you reverse. Choose Pause (stock) / Ducked / Lower.
 - **Call volume from the steering wheel** during CarPlay calls.
 - **CarPlay microphone level** (1/2/3, recommended 1) for clear calls and voice messages.
@@ -85,7 +85,7 @@ Ready-made APKs: **[Releases](https://github.com/DZCyberZec/dfsk-glory600-mods/r
 One version of each app, in English, switching to Italian when the head unit is set to Italian. The Italian translation overlays are only for units set to Italian. Pick only the pieces you want: see [docs/INSTALL.md – Step 0](docs/INSTALL.md#step-0--choose-what-you-want).
 
 ## Restore to stock
-Going to the dealership? `./restore_stock.sh` (dry run first, then `--yes`) removes Home CyberZec, DFSK Helper and the translations and brings back the stock Home. Nothing is written to `/system`. Details: [docs/INSTALL.md](docs/INSTALL.md#restore-to-stock).
+Going to the dealership? `./restore_stock.sh` (dry run first, then `--yes`) removes Home CyberZec, CyberZec Set and the translations and brings back the stock Home. Nothing is written to `/system`. Details: [docs/INSTALL.md](docs/INSTALL.md#restore-to-stock).
 
 ## Build
 No Gradle. Needs Android SDK build-tools 35.0.0, platform android-28, a JDK.

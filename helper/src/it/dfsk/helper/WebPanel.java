@@ -212,7 +212,7 @@ public final class WebPanel {
 
     private String loginPage(long now) {
         return page(takeFlash() + (auth.isLocked(now) ? "<p>" + Lang.t("Accesso bloccato per qualche minuto.", "Access blocked for a few minutes.") + "</p>" : "")
-                + "<form method=post action=/login><label>" + Lang.t("PIN (lo trovi nell'app DFSK Helper sull'auto)", "PIN (shown in the DFSK Helper app in the car)") + "<br>"
+                + "<form method=post action=/login><label>" + Lang.t("PIN (lo trovi nell'app CyberZec Set sull'auto)", "PIN (shown in the CyberZec Set app in the car)") + "<br>"
                 + "<input name=pin inputmode=numeric pattern=\"[0-9]{6}\" maxlength=6 autocomplete=off required></label>"
                 + "<button>" + Lang.t("Entra", "Log in") + "</button></form>");
     }
@@ -237,7 +237,7 @@ public final class WebPanel {
 
     private static String page(String body) {
         return "<!doctype html><html lang=" + Lang.t("it", "en") + "><head><meta charset=utf-8>"
-                + "<meta name=viewport content=\"width=device-width,initial-scale=1\"><title>DFSK Helper</title><style>"
+                + "<meta name=viewport content=\"width=device-width,initial-scale=1\"><title>CyberZec Set</title><style>"
                 + "body{font:17px -apple-system,system-ui,sans-serif;margin:0;padding:16px;background:#f4f4f6;color:#111}"
                 + "h1{font-size:22px}h2{font-size:17px;margin:22px 0 8px}table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px}"
                 + "th,td{text-align:left;padding:8px;border-bottom:1px solid #eee;vertical-align:top}th{font-weight:600;width:45%}"
@@ -245,7 +245,7 @@ public final class WebPanel {
                 + "button.o{background:#777}input{font-size:22px;padding:10px;width:9em;margin:8px 0;letter-spacing:4px}"
                 + ".f{background:#fff3c4;padding:10px;border-radius:8px}"
                 + "@media(prefers-color-scheme:dark){body{background:#111;color:#eee}table{background:#1d1d1f}th,td{border-color:#333}.f{background:#4a3f12}}"
-                + "</style></head><body><h1>DFSK Helper</h1>" + body + "</body></html>";
+                + "</style></head><body><h1>CyberZec Set</h1>" + body + "</body></html>";
     }
 
     static String esc(String s) {

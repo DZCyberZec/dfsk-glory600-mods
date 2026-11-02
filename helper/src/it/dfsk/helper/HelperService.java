@@ -332,7 +332,7 @@ public class HelperService extends Service {
     private Notification buildNotification() {
         Notification.Builder b;
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel ch = new NotificationChannel("helper", "DFSK Helper", NotificationManager.IMPORTANCE_MIN);
+            NotificationChannel ch = new NotificationChannel("helper", "CyberZec Set", NotificationManager.IMPORTANCE_MIN);
             ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(ch);
             b = new Notification.Builder(this, "helper");
         } else {
@@ -340,7 +340,7 @@ public class HelperService extends Service {
         }
         PendingIntent pi = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0);
         return b.setSmallIcon(android.R.drawable.ic_menu_manage)
-                .setContentTitle(Lang.t("DFSK Helper attivo", "DFSK Helper running"))
+                .setContentTitle(Lang.t("CyberZec Set attivo", "CyberZec Set running"))
                 .setContentText(Lang.t("Musica in retromarcia e volume chiamata", "Music in reverse and call volume"))
                 .setContentIntent(pi).setOngoing(true).build();
     }
