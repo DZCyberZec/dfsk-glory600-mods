@@ -20,7 +20,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 |---|---|
 | **Music stops every time you shift into reverse** and doesn't always come back | DFSK Helper: choose *Ducked* or *Lower* – music keeps playing, quieter, while the camera is on |
 | **Steering-wheel volume keys don't change call volume** during CarPlay calls | DFSK Helper: wheel keys control the call volume while a call is active |
-| **People hear you distorted / too loud** on CarPlay calls | Stock mic gain is ×5. Setting `persist.suding.mic.gainlevel.default` to 1 fixes it (needs system privileges, see [TECH_NOTES](docs/TECH_NOTES.md)) |
+| **Call and voice quality over CarPlay** (phone, WhatsApp, Siri): the other party hears you muffled / distorted | **Fixed.** Stock SpeedPlay mic gain is ×5; lowering it to ×1 cleans it up. DFSK Helper → *CarPlay microphone* level 1/2/3 (1 recommended); or set `persist.suding.mic.gainlevel.default` to 1 (needs system privileges, e.g. `adb shell setprop`, see [TECH_NOTES](docs/TECH_NOTES.md)). Tested in a real call: sounds almost like calling from the phone |
 | **Car Wi-Fi drops right after start-up** | Not a bug: with the iPhone's Bluetooth on, CarPlay over Bluetooth takes over the `ap0` hotspot. Use the cable, or turn the phone's Bluetooth off for car Wi-Fi |
 | No way to see if CarPlay is connected from the home screen | Home CyberZec shows a CarPlay chip (`bw.carplay.connect.state` 2 = cable) |
 
@@ -64,6 +64,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 ### DFSK Helper
 - **Reverse gear + CarPlay**: stock unit pauses your music every time you reverse. Choose Pause (stock) / Ducked / Lower.
 - **Call volume from the steering wheel** during CarPlay calls.
+- **CarPlay microphone level** (1/2/3, recommended 1) for clear calls and voice messages.
 - All options are switches in the app; status screen shows what the unit reports.
 
 ## Tested on

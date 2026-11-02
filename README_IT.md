@@ -14,7 +14,7 @@
 **CarPlay (SpeedPlay)**
 - **La musica si ferma ogni volta che metti la retromarcia** → DFSK Helper: *Attenuata* o *Più bassa*, la musica continua più bassa.
 - **I tasti volume al volante non cambiano il volume della chiamata** → DFSK Helper li collega alla chiamata CarPlay.
-- **Chi ti ascolta ti sente distorto** → il microfono di serie è ×5; a 1 si sente pulito (serve accesso di sistema, vedi note tecniche).
+- **Qualità delle chiamate e dei vocali via CarPlay** (telefono, WhatsApp, Siri): chi ascolta ti sente distorto → **risolto**. Il guadagno microfono di serie di SpeedPlay è ×5; a ×1 si sente pulito. DFSK Helper → *Microfono CarPlay* livello 1/2/3 (consigliato 1), oppure `persist.suding.mic.gainlevel.default` a 1 (serve accesso di sistema, es. `adb shell setprop`, vedi note tecniche). Provato in una chiamata reale: si sente quasi come chiamare dal telefono.
 - **Il Wi-Fi dell'auto cade appena accendi** → con il Bluetooth dell'iPhone acceso, CarPlay via Bluetooth occupa l'hotspot `ap0`. Usa il cavo o spegni il Bluetooth.
 
 **Clima**
