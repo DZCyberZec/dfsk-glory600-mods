@@ -27,7 +27,6 @@ final class Hvac {
     static final int RECIRC_ON = 354419976, AREA_RECIRC = 117;
     static final int DEFROST = 320865540, AREA_FRONT_WINDOW = 1, AREA_REAR_WINDOW = 2;
     static final int TEMP = 358614275, AREA_TEMP = 4;       // level scale with offline_hvac_type=0
-    static final int OUTSIDE_TEMP = 291505923;              // ENV_OUTSIDE_TEMPERATURE, Float °C, read-only, global area
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private Object car, prop;
@@ -104,7 +103,7 @@ final class Hvac {
 
     /** NaN when not readable. */
     float getFloat(int id, int area) {
-        if (demo) return id == TEMP ? dTemp : id == OUTSIDE_TEMP ? 14f : Float.NaN;
+        if (demo) return id == TEMP ? dTemp : Float.NaN;
         if (prop == null) return Float.NaN;
         try {
             Object v = call("getProperty", new Class<?>[]{Class.class, int.class, int.class}, Float.class, id, area);

@@ -63,7 +63,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 **Note:** on the author's car these were signed with a different key. The builds in this repo use your own key; they compile, but the Home climate control and the overlays still need a test with this signing. Please report in Issues.
 
 ### Home CyberZec
-- Big, glanceable UI (Android "Design for Driving" sizes): clock + date, CarPlay / Wi-Fi / GPS / outside-temperature chips.
+- Big, glanceable UI (Android "Design for Driving" sizes): clock + date, CarPlay / Wi-Fi / GPS chips.
 - **Climate control**: on/off, level in half steps (blue − / red +), fan 0–8, 4 air modes with icons, A/C, recirculation, windscreen and rear-window defrost. Shows the real state read from the car.
 - Weather by GPS (Open-Meteo, no API key) with city name, cached for offline use.
 - Sky that follows real sunrise/sunset and the weather (light animation), darker theme at night, next hours forecast, rain warning.

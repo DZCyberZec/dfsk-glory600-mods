@@ -114,7 +114,7 @@ public class HomeActivity extends Activity {
     private boolean resumed;
     private int shownPhase = -1;   // sky phase the night dimming was last applied for
 
-    private TextView chipNet, chipGps, chipOutside;
+    private TextView chipNet, chipGps;
     private ImageView chipNetIcon;
     private SkyView sky;
     private double[] sun;   // today's sunrise/sunset in minutes, null without a position (updateStatus)
@@ -241,10 +241,6 @@ public class HomeActivity extends Activity {
 
         boolean gps = lastGpsAt > 0 && SystemClock.elapsedRealtime() - lastGpsAt < GPS_FRESH_MS;
         show(chipGps, gps);
-
-        float out = hvac.getFloat(Hvac.OUTSIDE_TEMP, 0);
-        show(chipOutside, !Float.isNaN(out));
-        if (!Float.isNaN(out)) chipOutside.setText(Logic.t("Fuori ", "Outside ") + Math.round(out) + "°");
 
         Calendar cal = Calendar.getInstance();
         int hour = cal.get(Calendar.HOUR_OF_DAY);
@@ -670,7 +666,6 @@ public class HomeActivity extends Activity {
         chipNet = chip(chips, R.drawable.st_wifi, LIME, "Wi-Fi");
         chipNetIcon = (ImageView) ((ViewGroup) chipNet.getParent()).getChildAt(0);
         chipGps = chip(chips, R.drawable.st_gps, LIME, "GPS");
-        chipOutside = chip(chips, R.drawable.st_temp, TEAL, "");
         right.addView(chips, new LinearLayout.LayoutParams(-1, px(60)));
         right.addView(mediaCard(), new LinearLayout.LayoutParams(-1, 0, 1));
 
