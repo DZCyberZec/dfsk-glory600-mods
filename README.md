@@ -50,7 +50,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 
 | Folder | What it is | Tested on the car |
 |---|---|---|
-| [`home/`](home) | **Home CyberZec** – a driver-friendly launcher with real climate control | ✅ (see note below) |
+| [`home/`](home) | **Home CyberZec** – a driver-friendly launcher with real climate control; the media card also shows CarPlay calls (answer / end) and untitled audio | ✅ (see note below) |
 | [`helper/`](helper) | **CyberZec Set** – CarPlay music keeps playing in reverse, steering-wheel call volume, web panel for the phone | ✅ |
 | [`keyboard/`](keyboard) | **Tastiera CyberZec** – big in-car keyboard (QWERTY, numbers, accents); receives text typed on the phone | ✅ |
 | [`iphone/`](iphone) | **CyberZec Remote** – iPhone app (SwiftUI) for the CyberZec Set web panel | ✅ |

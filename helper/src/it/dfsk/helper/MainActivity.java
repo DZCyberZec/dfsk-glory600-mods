@@ -36,13 +36,26 @@ public class MainActivity extends Activity {
     private String qrIp;
     private final Handler h = new Handler();
     private final Runnable qrTick = new Runnable() { public void run() { refreshQr(false); h.postDelayed(this, 5000); } };
+    private HorizontalScrollView scroll;
+    private static volatile MainActivity live; // on screen, for changes made from the phone
+
+    /** A choice was changed from the web panel / iPhone app: redraw the cards if Set is on screen. */
+    static void changed() {
+        final MainActivity a = live;
+        if (a != null) a.runOnUiThread(new Runnable() { public void run() { if (live == a) { a.build(); a.refresh(); } } });
+    }
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         requestWindowFeature(android.view.Window.FEATURE_NO_TITLE); // the card row needs the full 720 px height
         HelperService.start(this);
         k = getResources().getDisplayMetrics().density / 1.5f; // design pixels are 240 dpi pixels, like Home CyberZec
+    }
 
+    /** The whole screen; rebuilt on resume and on phone changes, so every choice shows its current value. */
+    private void build() {
+        final int x = scroll != null ? scroll.getScrollX() : 0;
+        qrIp = null; // new QR view: render it again
         LinearLayout root = vbox();
         root.setBackground(background());
         root.setPadding(0, px(22), 0, px(26));
@@ -133,15 +146,20 @@ public class MainActivity extends Activity {
         s.addView(row);
         root.addView(s, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
+        scroll = s;
+        s.post(new Runnable() { public void run() { scroll.scrollTo(x, 0); } });
     }
 
     @Override protected void onResume() {
         super.onResume();
+        live = this;
+        build();
         refresh();
         if (webBox != null) qrTick.run();
     }
 
     @Override protected void onPause() {
+        live = null;
         h.removeCallbacks(qrTick);
         super.onPause();
     }

@@ -155,6 +155,17 @@ final class Logic {
         return null;
     }
 
+    /** CarPlay call card line for an iAP2 call status (SpeedPlay broadcast CarPlayPhoneStatus); null = no call to show. */
+    static String callText(int status) {
+        switch (status) {
+            case 1: case 3: return t("Chiamata in uscita", "Calling");
+            case 2: return t("Chiamata in arrivo", "Incoming call");
+            case 4: return t("In chiamata", "In call");
+            case 5: return t("Chiamata in attesa", "Call on hold");
+            default: return null;   // 0 disconnected, 6 disconnecting
+        }
+    }
+
     /** "m:ss" or "h:mm:ss" for a media position. */
     static String clock(long ms) {
         long s = Math.max(0, ms / 1000);

@@ -116,9 +116,13 @@ public class HelperService extends Service {
                     checkDuck();
                 }
                 // SpeedPlay (re)started or phone connected: its backing flag may have been reset
-                if ("CONNECTED".equals(status) || "SERVICE_READY".equals(status)) {
+                if ("CONNECTING".equals(status)) {
+                    // the iPhone sends the title once, right at connection: the service must already be listening
+                    if (Sys.isSystem() && Prefs.carplayTrack(HelperService.this) && !spSessionActive()) startCarPlayMedia("started early");
+                    h.postDelayed(new Runnable() { public void run() { updateCarPlayMedia(false); } }, 60_000); // connection failed: stop it
+                } else if ("CONNECTED".equals(status) || "SERVICE_READY".equals(status)) {
                     scheduleArm();
-                    updateCarPlayMedia(true); // SpeedPlay may have restarted and lost its media service
+                    updateCarPlayMedia(!spSessionActive()); // SpeedPlay may have restarted and lost its media service
                 } else if ("DISCONNECT".equals(status) || "EXIT".equals(status)) updateCarPlayMedia(false);
             }
         }
@@ -398,14 +402,22 @@ public class HelperService extends Service {
             want = Sys.isSystem() && Prefs.carplayTrack(this)
                     && Settings.Secure.getInt(getContentResolver(), CARPLAY_STATE, 0) != 0;
             if (!want) return; // updateCarPlayMedia stops the service
-            boolean found = false;
-            MediaSessionManager msm = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
-            for (MediaController c : msm.getActiveSessions(null)) if (SP.equals(c.getPackageName())) { found = true; break; }
-            if (!found) { startCarPlayMedia("restarted"); return; } // reschedules itself
+            if (!spSessionActive()) { startCarPlayMedia("restarted"); return; } // reschedules itself
         } catch (Throwable t) {
             Log.e(TAG, "carplay track: watchdog failed: " + t);
         }
         if (want) h.postDelayed(cpWatch, CP_WATCH_MS);
+    }
+
+    /** SpeedPlay's media session exists. Starting its service again would blank the title (onStartCommand resets it). */
+    private boolean spSessionActive() {
+        try {
+            MediaSessionManager msm = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
+            for (MediaController c : msm.getActiveSessions(null)) if (SP.equals(c.getPackageName())) return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "carplay track: sessions: " + t);
+        }
+        return false;
     }
 
     private void stopCarPlayMedia() {
@@ -443,13 +455,18 @@ public class HelperService extends Service {
         return new WebPanel.Backend() {
             public Map<String, String> status() { return HelperService.status(c); }
             public boolean act(String a, String v) {
+                boolean ok = actNow(a, v);
+                MainActivity.changed(); // Set may be on screen: show the new choice
+                return ok;
+            }
+            private boolean actNow(String a, String v) {
                 Log.i(TAG, "web action " + a + ("type".equals(a) ? "" : "=" + v)); // never log typed text
                 switch (a) {
                     case "mic": return Sys.setMic(Integer.parseInt(v));
                     case "reverse": setReverseMode(c, Integer.parseInt(v)); return true;
                     case "callvol": Prefs.get(c).edit().putBoolean(Prefs.CALL_VOLUME, "on".equals(v)).apply(); start(c); return true;
                     case "retrovol": setRetroPercent(c, Integer.parseInt(v)); return true; // whitelist: 0(auto)/100/75/50/25
-                    case "home": return Sys.forceStop(c, Sys.HOME);
+                    case "home": return Sys.forceStop(c, Sys.HOME) && Sys.key(c, "home"); // reopen it now, also from CarPlay
                     case "adb": return Sys.setAdbWifi(c, "on".equals(v));
                     case "voice": return Sys.setWelcomeVoice(c, "on".equals(v));
                     case "cptrack": Prefs.get(c).edit().putBoolean(Prefs.CARPLAY_TRACK, "on".equals(v)).apply(); start(c); return true;
@@ -485,6 +502,15 @@ public class HelperService extends Service {
         };
     }
 
+    /** Connected Wi-Fi name, null if not connected. */
+    static String wifiSsid(Context c) {
+        try {
+            WifiInfo wi = ((WifiManager) c.getApplicationContext().getSystemService(WIFI_SERVICE)).getConnectionInfo();
+            if (wi != null && wi.getNetworkId() != -1) return wi.getSSID().replaceAll("^\"|\"$", "");
+        } catch (Throwable ignored) { }
+        return null;
+    }
+
     /** Status lines for the app screen and the web panel. */
     static Map<String, String> status(Context c) {
         Map<String, String> m = new LinkedHashMap<>();
@@ -499,17 +525,15 @@ public class HelperService extends Service {
         String park = Prefs.get(c).getString(Prefs.PARK, null); // ours: recorded even when the Home is not on screen
         if (park == null) park = hm.get("park"); // "lat,lon,epochMs": exact title/value parsed by the iPhone app
         if (park != null && park.matches("^-?\\d+\\.\\d+,-?\\d+\\.\\d+,\\d+$")) m.put("Parcheggio", park);
-        String ssid = null;
-        try {
-            WifiInfo wi = ((WifiManager) c.getApplicationContext().getSystemService(WIFI_SERVICE)).getConnectionInfo();
-            if (wi != null && wi.getNetworkId() != -1) ssid = wi.getSSID().replaceAll("^\"|\"$", "");
-        } catch (Throwable ignored) { }
+        String ssid = wifiSsid(c);
         m.put("Wi-Fi", ssid != null ? ssid : Lang.t("non connesso", "not connected"));
         String hsid = Prefs.hotspotSsid(c);
         m.put(Lang.t("Hotspot automatico", "Automatic hotspot"), hsid.isEmpty() ? Lang.t("spento", "off") : hsid);
         String why = unsafeReason();
         m.put(Lang.t("Retromarcia", "Reverse"), why == null ? Lang.t("compatibile", "compatible") : Lang.t("disattivata per sicurezza (", "disabled for safety (") + why + ")");
         m.put(Lang.t("Musica in retromarcia", "Music in reverse"), modeNames()[Prefs.reverseMode(c)] + (ReverseState.INSTANCE.isDucked() ? Lang.t(" (abbassata ora)", " (lowered now)") : ""));
+        int rp = Prefs.retroPercent(c); // exact title of the command: the iPhone app lights up the active choice from it
+        m.put(Lang.t("Volume in retromarcia", "Volume in reverse"), rp == RetroVolume.AUTO ? "Auto" : rp + "%");
         m.put(Lang.t("Ultimo evento retro", "Last reverse event"), ReverseState.INSTANCE.lastEvent);
         m.put(Lang.t("Chiamata CarPlay attiva", "CarPlay call active"), CallState.INSTANCE.isActive(SystemClock.elapsedRealtime()) ? Lang.t("sì", "yes") : "no");
         m.put(Lang.t("Volume chiamata dal volante", "Call volume from steering wheel"), Prefs.callVolume(c) ? Lang.t("attivo", "on") : Lang.t("spento", "off"));

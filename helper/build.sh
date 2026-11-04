@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build DFSK-Helper without Gradle. Requires: build-tools 35.0.0, platforms;android-28, JDK.
-#   ./build.sh            -> DFSK-Helper.apk         (user app, own debug key, v2.3, versionCode 14)
+#   ./build.sh            -> DFSK-Helper.apk         (user app, own debug key, v2.5, versionCode 16)
 set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home}

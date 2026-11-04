@@ -56,6 +56,8 @@ public class LogicTest {
         assert Logic.cityValue("Roma|91|12") == null && Logic.cityValue("Roma|41|-181") == null && Logic.cityValue("Roma|NaN|12") == null;
         assert Logic.cityValue("Roma|41|12|x") == null && Logic.cityValue("Roma|41") == null && Logic.cityValue("Roma|a|12") == null;
         assert Logic.cityValue("12345678901234567890123456789012345678901|1|1") == null;
+        assert Logic.callText(2).equals("Chiamata in arrivo") && Logic.callText(4).equals("In chiamata") && Logic.callText(1).equals("Chiamata in uscita");
+        assert Logic.callText(0) == null && Logic.callText(6) == null && Logic.callText(-1) == null && Logic.callText(5) != null;
         java.util.Locale.setDefault(java.util.Locale.US);
         assert Logic.meteoText(0).equals("Clear") && Logic.meteoText(85).equals("Snow showers") && Logic.meteoText(81).equals("Showers");
         assert Logic.climaLevelText(28.5f).equals("4.5") && Logic.modeName(0).equals("Face");

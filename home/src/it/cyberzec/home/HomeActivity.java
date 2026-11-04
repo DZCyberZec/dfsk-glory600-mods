@@ -126,7 +126,8 @@ public class HomeActivity extends Activity {
     private TextView greet, greetName, alert, wCity, wTemp, wText, climaSub;
     private ImageView wIcon, wPin, mPlay;
     private TextView mChannel, mSub, mTitle, mPos, mDur;
-    private LinearLayout mBar, mControls, mProgress;
+    private LinearLayout mBar, mControls, mProgress, cControls;
+    private ImageView cAnswer;
     private boolean mediaDenied, demoPlaying = true;
     private long demoPos = 418_000;
 
@@ -159,6 +160,9 @@ public class HomeActivity extends Activity {
         f.addAction(Intent.ACTION_PACKAGE_CHANGED);
         f.addDataScheme("package");
         registerReceiver(packages, f);
+        IntentFilter cpf = new IntentFilter(CP_PHONE);
+        cpf.addAction(SPEEDPLAY);
+        registerReceiver(carplayPhone, cpf);
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
@@ -187,6 +191,7 @@ public class HomeActivity extends Activity {
     @Override protected void onDestroy() {
         if (live == this) live = null;
         unregisterReceiver(packages);
+        unregisterReceiver(carplayPhone);
         hvac.disconnect();
         h.removeCallbacksAndMessages(null);
         super.onDestroy();
@@ -406,6 +411,32 @@ public class HomeActivity extends Activity {
     // ---------------------------------------------------------------- CarPlay media (session opened by DFSK Helper, see ANALISI_CARPLAY_BRANO.md)
 
     static final String SPEEDPLAY = "com.suding.speedplay";
+    static final String CP_PHONE = "com.suding.speedplay.intent.action.CarPlayPhone";   // SpeedPlay, every CarPlay call change
+
+    private String callWho;
+    private int callStatus;
+    private long callSince;   // elapsedRealtime when the call became active, 0 = not yet
+
+    private final BroadcastReceiver carplayPhone = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            if (SPEEDPLAY.equals(i.getAction())) {   // plain status, always sent (CarPlayPhone is skipped by a SpeedPlay bug
+                String st = i.getStringExtra("status");   // once a call ended without status 0)
+                if ("PHONE_CALL_ON".equals(st) && callStatus == 0) { callStatus = 4; callSince = SystemClock.elapsedRealtime(); }
+                else if ("PHONE_CALL_OFF".equals(st) || "DISCONNECT".equals(st)) { callStatus = 0; callSince = 0; callWho = null; }
+                else return;
+                updateMedia();
+                return;
+            }
+            int st = i.getIntExtra("CarPlayPhoneStatus", 0);
+            String name = i.getStringExtra("CarPlayPhoneName"), num = i.getStringExtra("CarPlayPhoneNumber");
+            callWho = name != null && !name.isEmpty() ? name : num;   // never logged: it is a contact
+            if (st == 4 && callStatus != 4) callSince = SystemClock.elapsedRealtime();
+            if (st != 4 && st != 5) callSince = 0;
+            if (st == 0) callWho = null;
+            callStatus = st;
+            updateMedia();
+        }
+    };
     static final boolean EMULATOR = "ranchu".equals(Build.HARDWARE) || "goldfish".equals(Build.HARDWARE);
 
     /** What the media card shows: CarPlay while it is connected, otherwise whatever app is playing (NewPipe...),
@@ -433,8 +464,42 @@ public class HomeActivity extends Activity {
         return null;
     }
 
+    private MediaController spCtl;
+    private final long[] spPlays = {-9999, -9999, -9999};   // last 3 "playing" updates from SpeedPlay (elapsedRealtime)
+    private int spIdx;
+    private final MediaController.Callback spCb = new MediaController.Callback() {
+        @Override public void onPlaybackStateChanged(PlaybackState st) {
+            if (st != null && st.getState() == PlaybackState.STATE_PLAYING) spPlays[spIdx++ % 3] = SystemClock.elapsedRealtime();
+        }
+    };
+
+    /** Follows SpeedPlay's session (it is recreated when its service restarts). */
+    private void watchCarPlay(MediaController c) {
+        if (c == null || spCtl != null && spCtl.getSessionToken().equals(c.getSessionToken())) return;
+        if (spCtl != null) spCtl.unregisterCallback(spCb);
+        spCtl = c;
+        c.registerCallback(spCb, h);
+    }
+
     private void updateMedia() {
         boolean carplay = Settings.Secure.getInt(getContentResolver(), "bw.carplay.connect.state", 0) != 0;
+        String call = carplay ? Logic.callText(callStatus) : null;
+        if (call != null) {   // a CarPlay call takes the card; the call itself is handled in CarPlay
+            coverFor = null;
+            coverShown = false;
+            mTitle.setText(callWho != null && !callWho.isEmpty() ? callWho : Logic.t("Chiamata", "Call"));
+            mChannel.setText(call + (callSince > 0 ? " · " + Logic.clock(SystemClock.elapsedRealtime() - callSince) : ""));
+            mSub.setText("CarPlay · " + Logic.t("Telefono", "Phone"));
+            thumb.setPadding(px(80), px(28), px(80), px(28));
+            thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            thumb.setImageResource(R.drawable.st_phone);
+            thumb.setBackground(round(0xFF182329, 22, 0xFF2E3A3D, 2));
+            mControls.setVisibility(View.GONE);
+            mProgress.setVisibility(View.INVISIBLE);
+            cAnswer.setVisibility(callStatus == 2 ? View.VISIBLE : View.GONE);
+            cControls.setVisibility(View.VISIBLE);
+            return;
+        }
         MediaController c = media();
         boolean cp = c == null || SPEEDPLAY.equals(c.getPackageName());
         String source = cp ? "CarPlay" : appLabel(c.getPackageName());
@@ -447,6 +512,13 @@ public class HomeActivity extends Activity {
             if (demoPlaying) demoPos += 2000;
         }
         boolean has = title != null && !title.isEmpty(), timed = false;
+        // CarPlay audio without a title (WhatsApp voice notes...): the iPhone only sends the elapsed time
+        // (about 2 updates a second). SpeedPlay also says "playing" once, with no data, each time its service (re)starts,
+        // and the framework rewrites position/update time, so count the real updates instead.
+        watchCarPlay(cp ? c : null);
+        long now = SystemClock.elapsedRealtime();
+        boolean untitled = !has && cp && c != null && ps != null && ps.getState() == PlaybackState.STATE_PLAYING
+                && now - spPlays[0] < 3000 && now - spPlays[1] < 3000 && now - spPlays[2] < 3000;
         if (has) {
             boolean playing = demo ? demoPlaying : ps != null && ps.getState() == PlaybackState.STATE_PLAYING;
             long dur = demo ? 1_104_000 : md.getLong(MediaMetadata.METADATA_KEY_DURATION);
@@ -501,6 +573,17 @@ public class HomeActivity extends Activity {
                 else thumb.setImageResource(album != null && !album.isEmpty() ? R.drawable.src_music : R.drawable.src_video);
             }
             thumb.setBackground(round(0xFF182329, 22, 0xFF2E3A3D, 2));
+        } else if (untitled) {
+            coverFor = null;
+            coverShown = false;
+            mTitle.setText(Logic.t("Audio in riproduzione", "Audio playing"));
+            mChannel.setText(Logic.t("Vocale o audio senza titolo", "Voice message or untitled audio"));
+            mSub.setText("CarPlay · " + Logic.t("in riproduzione", "playing"));
+            mPlay.setImageResource(R.drawable.m_pause);
+            thumb.setPadding(px(80), px(28), px(80), px(28));
+            thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            thumb.setImageResource(R.drawable.src_music);
+            thumb.setBackground(round(0xFF182329, 22, 0xFF2E3A3D, 2));
         } else {
             coverFor = null;
             coverShown = false;
@@ -511,7 +594,8 @@ public class HomeActivity extends Activity {
             mSub.setText("CarPlay");
             thumb.setBackground(round(0x14FFFFFF, 22, LINE));
         }
-        mControls.setVisibility(has ? View.VISIBLE : View.GONE);
+        mControls.setVisibility(has || untitled ? View.VISIBLE : View.GONE);
+        cControls.setVisibility(View.GONE);
         mProgress.setVisibility(has && timed ? View.VISIBLE : View.INVISIBLE);
     }
 
@@ -768,8 +852,32 @@ public class HomeActivity extends Activity {
         ((LinearLayout.LayoutParams) mControls.getChildAt(0).getLayoutParams()).width = px(112);
         ((LinearLayout.LayoutParams) mControls.getChildAt(0).getLayoutParams()).height = px(112);
         row.addView(mControls, margins(-2, -2, 26, 0, 0, 0));
+        cControls = hbox();   // CarPlay call: same keys as the steering wheel, sent to SpeedPlay
+        cAnswer = callKey(R.drawable.c_answer, 0xFF2FB36A, 5);
+        cControls.addView(cAnswer);
+        cControls.addView(callKey(R.drawable.c_end, 0xFFE5484D, 6), margins(px(112), px(112), 22, 0, 0, 0));
+        cControls.setVisibility(View.GONE);
+        row.addView(cControls, margins(-2, -2, 26, 0, 0, 0));
         c.addView(row);
         return c;
+    }
+
+    /** SpeedPlay's exported vendor receiver: REQ_SPEC_FUNC_CMD 5 = answer, 6 = end call (steering-wheel keys). */
+    private ImageView callKey(int icon, int color, final int code) {
+        ImageView b = new ImageView(this);
+        b.setImageResource(icon);
+        b.setColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN);
+        b.setPadding(px(28), px(28), px(28), px(28));
+        b.setBackground(round(color, 999, 0));
+        b.setContentDescription(code == 5 ? Logic.t("Rispondi", "Answer") : Logic.t("Chiudi chiamata", "End call"));
+        b.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                sendBroadcast(new Intent("com.suding.speedplay.receive").setPackage(SPEEDPLAY)
+                        .putExtra("command", "REQ_SPEC_FUNC_CMD").putExtra("specFuncCode", code));
+            }
+        });
+        b.setLayoutParams(new LinearLayout.LayoutParams(px(112), px(112)));
+        return b;
     }
 
     private ImageView roundKey(int icon, int code, boolean main) {

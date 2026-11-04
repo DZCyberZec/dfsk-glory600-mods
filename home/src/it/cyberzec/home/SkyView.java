@@ -41,11 +41,14 @@ final class SkyView extends View {
         invalidate();
     }
 
-    /** False when the Home is not visible: the last frame stays still. */
+    private final Runnable frame = new Runnable() { public void run() { invalidate(); } };
+
+    /** False when the Home is not visible: the last frame stays still. Called every 2 s: an invalidate dropped
+     *  while the window was hidden (e.g. CarPlay on top) would otherwise stop the animation for good. */
     void setRunning(boolean on) {
-        if (on == running) return;
         running = on;
-        if (on) postInvalidateOnAnimation();
+        removeCallbacks(frame);
+        if (on) postOnAnimation(frame);
     }
 
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
@@ -69,7 +72,10 @@ final class SkyView extends View {
         if (kind == 1 || (kind == 0 && phase < 2)) clouds(c, w, h, t, kind == 1 ? 3 : 1);
         if (kind == 2) drops(c, w, h, t);
         c.restore();
-        if (running) postInvalidateDelayed(FRAME_MS);
+        if (running) {
+            removeCallbacks(frame);   // one pending frame at most
+            postDelayed(frame, FRAME_MS);
+        }
     }
 
     /** 0..1..0 over the period, smooth. */
@@ -107,10 +113,11 @@ final class SkyView extends View {
     }
 
     private void stars(Canvas c, int w, int h, float t) {
-        for (int i = 0; i < 28; i++) {
-            float a = 0.25f + 0.75f * wave(t + i * 0.37f * 4, 12);
-            fx.setColor(Math.round(a * 200) << 24 | 0xFFFFFF);
-            c.drawCircle((37 * i * 7) % w, (53 * i * 3) % (h * 0.55f) + 10, i % 3 == 0 ? 2.2f : 1.6f, fx);
+        for (int i = 0; i < 28; i++) {   // twinkle every ~5 s and drift slowly right (6 px/s): visible, not distracting
+            float a = 0.15f + 0.85f * wave(t + i * 0.37f * 4, 5);
+            fx.setColor(Math.round(a * 230) << 24 | 0xFFFFFF);
+            float x = ((37 * i * 7) + t * 6) % w;
+            c.drawCircle(x, (53 * i * 3) % (h * 0.55f) + 10, i % 3 == 0 ? 3.4f : 2.4f, fx);
         }
     }
 }

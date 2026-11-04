@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="it.cyberzec.home" android:versionCode="22" android:versionName="0.15">
+    package="it.cyberzec.home" android:versionCode="29" android:versionName="0.22">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="28" />
     <!-- CyberZec Set changes Home settings and reads its status (apps signed with the same key) -->
     <permission android:name="it.cyberzec.permission.SETTINGS" android:protectionLevel="signature" />
