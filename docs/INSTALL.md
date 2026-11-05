@@ -1,5 +1,7 @@
 # Install and restore
 
+🇮🇹 [Versione italiana](INSTALL_IT.md)
+
 ## Step 0 – choose what you want
 
 Every piece is independent: install only what you need.
@@ -51,7 +53,7 @@ Not sure? Start with **CyberZec Set** alone: it changes the least, and `restore_
 ## Restore to stock
 Use it before dealership service or warranty work, or any time you want to hide the mods.
 
-**What it removes:** Home CyberZec (`it.cyberzec.home`), CyberZec Set (`it.dfsk.helper`) and every Italian overlay (`it.dfsk.overlay.*`), and it sets the stock Home (`com.android.launcher3/.Launcher`) back as default. Apps you installed yourself (for example E5 Launcher Plus) are left alone; remove them by hand if you want.
+**What it removes:** Home CyberZec (`it.cyberzec.home`), CyberZec Set (`it.dfsk.helper`), Tastiera CyberZec (`it.cyberzec.keyboard`) and every Italian overlay (`it.dfsk.overlay.*`), and it sets the stock Home (`com.android.launcher3/.Launcher`) back as default. Apps you installed yourself (for example E5 Launcher Plus) are left alone; remove them by hand if you want.
 
 **No trace in /system:** these mods never write to `/system`, so after removal the unit is exactly as the factory left it.
 
@@ -68,6 +70,7 @@ Manual fallback:
 adb shell cmd package set-home-activity com.android.launcher3/.Launcher
 adb uninstall it.cyberzec.home
 adb uninstall it.dfsk.helper
+adb uninstall it.cyberzec.keyboard
 adb shell cmd overlay list | grep it.dfsk.overlay   # then for each one:
 adb uninstall it.dfsk.overlay.<name>
 ```

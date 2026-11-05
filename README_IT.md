@@ -2,7 +2,7 @@
 
 > **Non ufficiale, non legato a DFSK, Seres o al produttore dell'unità. Lo usi a tuo rischio.**
 > Niente viene scritto in `/system`: le app si installano in `/data` e si tolgono con una normale disinstallazione.
-> Prima del tagliando torna all'originale (vedi [docs/INSTALL.md](docs/INSTALL.md)).
+> Prima del tagliando torna all'originale (vedi [docs/INSTALL_IT.md](docs/INSTALL_IT.md)).
 > Niente video alla guida; nulla tocca telecamere, sensori o sistemi di sicurezza.
 
 ▶ **[Video demo](docs/demo.mp4)** (emulatore: lì il clima è simulato, in auto comanda quello vero)
@@ -57,13 +57,13 @@ Ogni app esiste in una sola versione: è in inglese e diventa italiana da sola s
 - **Scegli i pezzi:** solo retromarcia e volume chiamata → CyberZec Set; Home grande con clima e meteo → Home CyberZec; tutto → tutti e tre.
 - **Indeciso?** Parti dal solo CyberZec Set: è quello che cambia meno e `restore_stock.sh` lo toglie in un attimo.
 
-Procedura completa, in inglese: [docs/INSTALL.md](docs/INSTALL.md).
+Procedura completa: [docs/INSTALL_IT.md](docs/INSTALL_IT.md).
 
 ## Ripristino all'originale
 Prima del tagliando o di un intervento in garanzia: `./restore_stock.sh` (prima in prova, poi con `--yes`) toglie Home CyberZec, CyberZec Set e le traduzioni e rimette la Home di serie.
 Su `/system` non viene scritto nulla, quindi non resta alcuna traccia.
 Dopo, riavvia l'infotainment (o spegni e riaccendi l'auto) perché la Home originale ricarichi i testi.
 Se avevi cambiato `persist.suding.mic.gainlevel.default`, rimettilo a `5`.
-Guida completa e comandi manuali: [docs/INSTALL.md](docs/INSTALL.md#restore-to-stock).
+Guida completa e comandi manuali: [docs/INSTALL_IT.md](docs/INSTALL_IT.md#tornare-alloriginale).
 
 Compilazione e note tecniche: vedi [README.md](README.md) e [docs/](docs). Licenza MIT.
