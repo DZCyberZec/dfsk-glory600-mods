@@ -26,7 +26,7 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 |---|---|
 | **Music stops every time you shift into reverse** and doesn't always come back | CyberZec Set: choose *Ducked* or *Lower* – music keeps playing, quieter, while the camera is on |
 | **Steering-wheel volume keys don't change call volume** during CarPlay calls | CyberZec Set: wheel keys control the call volume while a call is active |
-| **Call and voice quality over CarPlay** (phone, WhatsApp, Siri): the other party hears you muffled / distorted | **Fixed.** Stock SpeedPlay mic gain is ×5; lowering it to ×1 cleans it up. CyberZec Set → *CarPlay microphone* level 1/2/3 (1 recommended); or set `persist.suding.mic.gainlevel.default` to 1 (needs system privileges, e.g. `adb shell setprop`, see [TECH_NOTES](docs/TECH_NOTES.md)). Tested in a real call: sounds almost like calling from the phone |
+| **Call and voice quality over CarPlay** (phone, WhatsApp, Siri): the other party hears you muffled / distorted | **Fixed.** Stock SpeedPlay mic gain is ×5; lowering it to ×1 cleans it up. With a system build, CyberZec Set → *CarPlay microphone* level 1/2/3 (1 recommended); on the public build set `persist.suding.mic.gainlevel.default` to 1 with `adb shell setprop` (see [TECH_NOTES](docs/TECH_NOTES.md)). Tested in a real call: sounds almost like calling from the phone |
 | **Car Wi-Fi drops right after start-up** | Not a bug: with the iPhone's Bluetooth on, CarPlay over Bluetooth takes over the `ap0` hotspot. Use the cable, or turn the phone's Bluetooth off for car Wi-Fi |
 | No way to see if CarPlay is connected from the home screen | Home CyberZec shows a CarPlay chip (`bw.carplay.connect.state` 2 = cable) |
 
@@ -51,9 +51,9 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 | Folder | What it is | Tested on the car |
 |---|---|---|
 | [`home/`](home) | **Home CyberZec** – a driver-friendly launcher with real climate control; the media card also shows CarPlay calls (answer / end) and untitled audio | ✅ (see note below) |
-| [`helper/`](helper) | **CyberZec Set** – CarPlay music keeps playing in reverse, steering-wheel call volume, web panel for the phone | ✅ |
+| [`helper/`](helper) | **CyberZec Set** – CarPlay music keeps playing in reverse, steering-wheel call volume; web panel for the phone (system build only) | ✅ |
 | [`keyboard/`](keyboard) | **Tastiera CyberZec** – big in-car keyboard (QWERTY, numbers, accents); receives text typed on the phone | ✅ |
-| [`iphone/`](iphone) | **CyberZec Remote** – iPhone app (SwiftUI) for the CyberZec Set web panel | ✅ |
+| [`iphone/`](iphone) | **CyberZec Remote** – iPhone app (SwiftUI) for the CyberZec Set web panel (needs a system build of Set) | ✅ |
 | [`translations/`](translations) | Italian translation of 16 stock apps, as RRO overlays | ✅ (see note below) |
 | [`icons/`](icons) | "Aurora" icon set (generator + SVG) | ✅ |
 | [`docs/`](docs) | Install / restore guide, technical notes for developers | – |
@@ -75,11 +75,11 @@ Everyday annoyances of the stock head unit, and what to do about each one.
 ### CyberZec Set (formerly DFSK Helper)
 - **Reverse gear + CarPlay**: stock unit pauses your music every time you reverse. Choose Pause (stock) / Ducked / Lower.
 - **Call volume from the steering wheel** during CarPlay calls.
-- **CarPlay microphone level** (1/2/3, recommended 1) for clear calls and voice messages.
+- **CarPlay microphone level** (1/2/3, recommended 1) for clear calls and voice messages. System build only: on the public build use `adb shell setprop`.
 - **Music volume in reverse**: pick 100/75/50/25 % instead of the stock automatic duck.
-- **Web panel + QR / PIN** on the local network: change settings, set the Home weather city and greeting name, remote keys (back, home, media, volume), **type in the car** from the phone (goes to Tastiera CyberZec or the Home city search).
+- **Web panel + QR / PIN** (system build only) on the local network: change settings, set the Home weather city and greeting name, remote keys (back, home, media, volume), **type in the car** from the phone (goes to Tastiera CyberZec or the Home city search).
 - All options are switches in the app; status screen shows what the unit reports.
-- Some features need a system build and are disabled in the user app built here.
+- The microphone level, CarPlay track info and the web panel need a system build, which is not in this repo: they are off in the user app built here. Without the system key the Home media card can stay empty.
 
 ### Tastiera CyberZec and CyberZec Remote
 - The keyboard is a normal input method: enable it in Android settings. Home, Set and the keyboard talk through a signature permission, so **build all three with the same keystore**.

@@ -20,7 +20,7 @@
 **CarPlay (SpeedPlay)**
 - **La musica si ferma ogni volta che metti la retromarcia** → CyberZec Set: *Attenuata* o *Più bassa*, la musica continua più bassa.
 - **I tasti volume al volante non cambiano il volume della chiamata** → CyberZec Set li collega alla chiamata CarPlay.
-- **Qualità delle chiamate e dei vocali via CarPlay** (telefono, WhatsApp, Siri): chi ascolta ti sente distorto → **risolto**. Il guadagno microfono di serie di SpeedPlay è ×5; a ×1 si sente pulito. CyberZec Set → *Microfono CarPlay* livello 1/2/3 (consigliato 1), oppure `persist.suding.mic.gainlevel.default` a 1 (serve accesso di sistema, es. `adb shell setprop`, vedi note tecniche). Provato in una chiamata reale: si sente quasi come chiamare dal telefono.
+- **Qualità delle chiamate e dei vocali via CarPlay** (telefono, WhatsApp, Siri): chi ascolta ti sente distorto → **risolto**. Il guadagno microfono di serie di SpeedPlay è ×5; a ×1 si sente pulito. Con la versione di sistema di CyberZec Set → *Microfono CarPlay* livello 1/2/3 (consigliato 1); con quella pubblica `persist.suding.mic.gainlevel.default` a 1 (serve `adb shell setprop`, vedi note tecniche). Provato in una chiamata reale: si sente quasi come chiamare dal telefono.
 - **Il Wi-Fi dell'auto cade appena accendi** → con il Bluetooth dell'iPhone acceso, CarPlay via Bluetooth occupa l'hotspot `ap0`. Usa il cavo o spegni il Bluetooth.
 
 **Clima**
@@ -35,9 +35,9 @@
 
 ## Cosa c'è
 - **`home/` – Home CyberZec**: Home grande e leggibile alla guida, clima completo (⏻, livello a mezzi scatti, ventola, 4 modalità aria, A/C, ricircolo, parabrezza, lunotto), meteo con città, cielo che segue alba/tramonto e meteo, tema notte, previsioni a ore, scheda media (titolo, copertina, ⏮ ⏯ ⏭; chiamate CarPlay con Rispondi/Chiudi e audio senza titolo), ricerca città con tastiera grande, "Dove ho parcheggiato", stato CarPlay/Wi-Fi/GPS. **Si configura dall'app**: tieni premuta un'app per metterla nella barra o nasconderla.
-- **`helper/` – CyberZec Set** (prima DFSK Helper): la musica CarPlay non va più in pausa in retromarcia (Pausa / Attenuata / Più bassa); volume chiamata dai tasti al volante. Volume in retromarcia a scelta (100/75/50/25 %). Pannello web con QR/PIN in rete locale: impostazioni, città meteo e nome della Home, telecomando, **scrivi in auto dal telefono**. Alcune funzioni servono solo nella versione di sistema e qui sono spente.
-- **`keyboard/` – Tastiera CyberZec**: tastiera grande per l'auto (lettere, numeri, accenti), riceve il testo scritto sul telefono.
-- **`iphone/` – CyberZec Remote**: app iPhone (SwiftUI) per il pannello web di CyberZec Set. Apri in Xcode, metti il tuo team, avvia.
+- **`helper/` – CyberZec Set** (prima DFSK Helper): la musica CarPlay non va più in pausa in retromarcia (Pausa / Attenuata / Più bassa); volume chiamata dai tasti al volante. Volume in retromarcia a scelta (100/75/50/25 %). **Solo nella versione di sistema, che non è in questo repo:** livello microfono, titolo del brano CarPlay e pannello web con QR/PIN (impostazioni, telecomando, **scrivi in auto dal telefono**). Senza la chiave di sistema la scheda media della Home può restare vuota.
+- **`keyboard/` – Tastiera CyberZec**: tastiera grande per l'auto (lettere, numeri, accenti), riceve il testo scritto sul telefono (con la versione di sistema di Set).
+- **`iphone/` – CyberZec Remote**: app iPhone (SwiftUI) per il pannello web di CyberZec Set (serve la versione di sistema). Apri in Xcode, metti il tuo team, avvia.
 
 Home, Set e Tastiera si parlano con un permesso di firma: **compilale tutte con la stessa chiave**.
 - **`translations/`**: traduzione italiana di 16 app di serie (overlay RRO).
@@ -57,7 +57,7 @@ Ogni app esiste in una sola versione: è in inglese e diventa italiana da sola s
 - **Scegli i pezzi:** solo retromarcia e volume chiamata → CyberZec Set; Home grande con clima e meteo → Home CyberZec; tutto → tutti e tre.
 - **Indeciso?** Parti dal solo CyberZec Set: è quello che cambia meno e `restore_stock.sh` lo toglie in un attimo.
 
-Dettagli: [docs/INSTALL.md – Step 0](docs/INSTALL.md#step-0--choose-what-you-want).
+Procedura completa, in inglese: [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Ripristino all'originale
 Prima del tagliando o di un intervento in garanzia: `./restore_stock.sh` (prima in prova, poi con `--yes`) toglie Home CyberZec, CyberZec Set e le traduzioni e rimette la Home di serie.

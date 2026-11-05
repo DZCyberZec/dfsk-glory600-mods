@@ -18,23 +18,29 @@ Want another language? Copy `translations/<App>/values-it` to `values-<your lang
 
 | I want… | Install |
 |---|---|
-| Music not to stop in reverse, call volume from the steering wheel | `DFSK-Helper.apk` only |
-| A bigger home screen with climate control and weather | `HomeCyberZec.apk` (+ step 3) |
-| The stock apps in Italian | the `*_it_overlay.apk` files (step 4) |
+| Music not to stop in reverse, call volume from the steering wheel | `CyberZec-Set-<version>.apk` only |
+| A bigger home screen with climate control and weather | `HomeCyberZec-<version>.apk` (+ step 3) |
+| A big in-car keyboard | `TastieraCyberZec-<version>.apk`, then enable it in Android settings |
+| The stock apps in Italian | the `*_it_overlay.apk` files (step 4, needs adb) |
 | Everything | all of the above |
 
 Not sure? Start with **CyberZec Set** alone: it changes the least, and `restore_stock.sh` removes it in seconds.
 
-## Install (no computer needed)
-0. Download the files from the [latest release](https://github.com/DZCyberZec/dfsk-glory600-mods/releases) (or build them, see the README).
-1. Install **E5 APK Manager** on the head unit (see the E5 Launcher community).
+## Before you start
+- **Beta:** the public builds are signed with a different key from the author's car and have not been tried on a car yet. Home climate control and the overlays still need testing: please report what works in [Issues](https://github.com/DZCyberZec/dfsk-glory600-mods/issues).
+- **Not in the public builds:** CarPlay microphone level, CarPlay track info and the phone web panel (so also the iPhone app and typing from the phone) need a system build. Without the system key the Home media card can stay empty.
+- **adb:** the apps install without a computer. Enabling the overlays, setting the Home with a command and the automatic restore need adb connected to the unit.
+
+## Install apps (no computer needed)
+0. Download the APKs from the [latest release](https://github.com/DZCyberZec/dfsk-glory600-mods/releases) (or build them, see the README).
+1. Install **E5 APK Manager** on the head unit: follow [its guide on XDA](https://xdaforums.com/t/guide-dfsk-e5-fengon-600-evolute-i-space-install-any-apk-e5-apk-manager.4796818/) (by Chrisstian).
 2. Open its **Web Transfer**, open the shown address from your phone/PC on the same Wi-Fi, upload the APK, tap **Install** on the car.
 3. Home CyberZec: grant location when asked, then press Home and choose it.
    With adb you can set it directly:
    ```
    adb shell cmd package set-home-activity it.cyberzec.home/.HomeActivity
    ```
-4. Translations: install each `*_it_overlay.apk`, then enable it:
+4. Translations (adb needed): download `Italian-translation-overlays.zip` from the [v1.0.0-beta release](https://github.com/DZCyberZec/dfsk-glory600-mods/releases/tag/v1.0.0-beta), unzip it, install each `*_it_overlay.apk`, then enable it:
    ```
    adb shell cmd overlay enable it.dfsk.overlay.<name>
    ```
